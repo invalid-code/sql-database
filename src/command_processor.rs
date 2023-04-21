@@ -1,49 +1,48 @@
-const ROWS_PER_PAGE: i32 = 1000;
-const TABLE_MAX_PAGES: i32 = 5;
+const TABLE_MAX_ROWS: i32 = 5000;
 
 pub enum MetaCommandResult {
     Success,
     Unknown,
 }
 
+#[derive(Debug)]
 pub enum PrepareResult {
     Success,
     Unknown,
     SyntaxError,
+    InputTooLong,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum ExecuteResult {
+    #[default]
     Success,
     TableFull,
 }
 
+#[derive(Debug)]
 pub enum StatementType {
     Insert,
     Select,
 }
 
-#[derive()]
+#[derive(Debug, Default)]
 pub struct Statement {
     pub stype: Option<StatementType>,
     pub row: Option<Row>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Row {
     pub id: i32,
     pub username: String,
     pub email: String,
 }
 
+#[derive(Debug, Default)]
 pub struct Table {
     pub num_rows: i32,
-    pub pages: [Page; TABLE_MAX_PAGES as usize],
-}
-
-#[derive(Debug)]
-pub struct Page {
-    pub rows: [Option<Row>; ROWS_PER_PAGE as usize],
+    pub rows: Vec<Option<Row>>,
 }
 
 pub fn execute_meta_command(cmd: &String) -> Option<MetaCommandResult> {
@@ -58,17 +57,7 @@ pub fn execute_meta_command(cmd: &String) -> Option<MetaCommandResult> {
 impl Statement {
     pub fn prepare_statement(cmd: &String, statement: &mut Statement) -> PrepareResult {
         if &cmd[..6] == "insert" {
-            statement.stype = Some(StatementType::Insert);
-            let args: Vec<&str> = cmd[7..].split(" ").collect();
-            if args.len() < 3 {
-                return PrepareResult::SyntaxError;
-            }
-            statement.row = Some(Row {
-                id: std::str::FromStr::from_str(args[0]).unwrap(),
-                username: args[2].to_owned(),
-                email: args[1].to_owned(),
-            });
-            return PrepareResult::Success;
+            return StatementType::prepare_insert(cmd, statement);
         }
 
         if &cmd[..6] == "select" {
@@ -87,14 +76,32 @@ impl Statement {
 }
 
 impl StatementType {
+    fn prepare_insert(cmd: &String, statement: &mut Statement) -> PrepareResult {
+        statement.stype = Some(StatementType::Insert);
+        let args: Vec<&str> = cmd[7..].split(" ").collect();
+        if args.len() < 3 {
+            return PrepareResult::SyntaxError;
+        }
+
+        if args[1].len() > 255 || args[2].len() > 30 {
+            return PrepareResult::InputTooLong;
+        }
+
+        statement.row = Some(Row {
+            id: std::str::FromStr::from_str(args[0]).unwrap(),
+            username: args[2].to_owned(),
+            email: args[1].to_owned(),
+        });
+        PrepareResult::Success
+    }
+
     fn execute_insert(statement: &Statement, table: &mut Table) -> ExecuteResult {
-        if table.num_rows >= ROWS_PER_PAGE * TABLE_MAX_PAGES {
+        if table.num_rows >= TABLE_MAX_ROWS {
             return ExecuteResult::TableFull;
         }
 
         if let Some(row) = &statement.row {
-            let coords = Row::row_slot(row.id);
-            table.pages[coords.1].rows[coords.0] = Some(row.to_owned());
+            table.rows.push(Some(row.to_owned()));
         }
 
         table.num_rows += 1;
@@ -102,12 +109,9 @@ impl StatementType {
     }
 
     fn execute_select(table: &Table) -> ExecuteResult {
-        for page in &table.pages {
-            for row in &page.rows {
-                match row {
-                    Some(y) => print!("{} {} {}", y.id, y.email, y.username),
-                    None => (),
-                }
+        for row in &table.rows {
+            if let Some(row) = row {
+                print!("{} {} {}", row.id, row.email, row.username);
             }
         }
         ExecuteResult::Success
@@ -116,28 +120,9 @@ impl StatementType {
 
 impl Table {
     pub fn create_table() -> Table {
-        let pages: [Page; 5] = (0..TABLE_MAX_PAGES)
-            .into_iter()
-            .map(|_| Page {
-                rows: (0..ROWS_PER_PAGE)
-                    .into_iter()
-                    .map(|_| None)
-                    .collect::<Vec<Option<Row>>>()
-                    .try_into()
-                    .expect("failed to convert"),
-            })
-            .collect::<Vec<Page>>()
-            .try_into()
-            .expect("failed to convert");
-
-        Table { num_rows: 0, pages }
-    }
-}
-
-impl Row {
-    fn row_slot(row_num: i32) -> (usize, usize) {
-        let page_num = (row_num / ROWS_PER_PAGE) as usize;
-        let row_num = (row_num % TABLE_MAX_PAGES) as usize;
-        (row_num, page_num)
+        Table {
+            num_rows: 0,
+            rows: vec![],
+        }
     }
 }

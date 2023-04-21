@@ -1,7 +1,3 @@
-mod command_processor;
-mod repl;
-mod tests;
-
 fn main() {
-    repl::cli();
+    sql_database::repl::cli();
 }
