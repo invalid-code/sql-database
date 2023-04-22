@@ -1,23 +1,19 @@
-const TABLE_MAX_ROWS: i32 = 5000;
-
 pub enum MetaCommandResult {
     Success,
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PrepareResult {
     Success,
     Unknown,
     SyntaxError,
-    InputTooLong,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum ExecuteResult {
     #[default]
     Success,
-    TableFull,
 }
 
 #[derive(Debug)]
@@ -55,9 +51,9 @@ pub fn execute_meta_command(cmd: &String) -> Option<MetaCommandResult> {
 }
 
 impl Statement {
-    pub fn prepare_statement(cmd: &String, statement: &mut Statement) -> PrepareResult {
+    pub fn prepare_statement(cmd: &String, statement: &mut Statement, id: &i32) -> PrepareResult {
         if &cmd[..6] == "insert" {
-            return StatementType::prepare_insert(cmd, statement);
+            return StatementType::prepare_insert(cmd, statement, id);
         }
 
         if &cmd[..6] == "select" {
@@ -76,30 +72,22 @@ impl Statement {
 }
 
 impl StatementType {
-    fn prepare_insert(cmd: &String, statement: &mut Statement) -> PrepareResult {
+    fn prepare_insert(cmd: &String, statement: &mut Statement, id: &i32) -> PrepareResult {
         statement.stype = Some(StatementType::Insert);
         let args: Vec<&str> = cmd[7..].split(" ").collect();
-        if args.len() < 3 {
+        if args.len() < 2 {
             return PrepareResult::SyntaxError;
         }
 
-        if args[1].len() > 255 || args[2].len() > 30 {
-            return PrepareResult::InputTooLong;
-        }
-
         statement.row = Some(Row {
-            id: std::str::FromStr::from_str(args[0]).unwrap(),
-            username: args[2].to_owned(),
-            email: args[1].to_owned(),
+            id: id.to_owned() + 1,
+            username: args[1].to_owned(),
+            email: args[0].to_owned(),
         });
         PrepareResult::Success
     }
 
     fn execute_insert(statement: &Statement, table: &mut Table) -> ExecuteResult {
-        if table.num_rows >= TABLE_MAX_ROWS {
-            return ExecuteResult::TableFull;
-        }
-
         if let Some(row) = &statement.row {
             table.rows.push(Some(row.to_owned()));
         }

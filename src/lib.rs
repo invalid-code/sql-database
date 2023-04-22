@@ -39,12 +39,11 @@ pub mod repl {
                 row: None,
             };
 
-            match Statement::prepare_statement(&command, &mut statement) {
+            match Statement::prepare_statement(&command, &mut statement, &table.num_rows) {
                 PrepareResult::Success => {
                     if let Some(exec_res) = Statement::execute_statement(&statement, &mut table) {
                         match exec_res {
                             ExecuteResult::Success => println!("Executed"),
-                            ExecuteResult::TableFull => println!("table full"),
                         }
                     }
                 }
@@ -54,10 +53,6 @@ pub mod repl {
                 }
                 PrepareResult::SyntaxError => {
                     println!("syntax error");
-                    continue;
-                }
-                PrepareResult::InputTooLong => {
-                    println!("input too long");
                     continue;
                 }
             }

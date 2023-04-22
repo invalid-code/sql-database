@@ -6,7 +6,6 @@ struct RowWorld {
     statement: Statement,
     table: Table,
     execute_result: Option<ExecuteResult>,
-    max_rows: Vec<Statement>,
 }
 
 #[given("A Table")]
@@ -42,33 +41,6 @@ fn check_statement(world: &mut RowWorld) {
     if let Some(res) = &world.execute_result {
         assert!(res.to_owned() == ExecuteResult::Success);
     }
-}
-
-#[given("A Max Statement")]
-fn create_max_statement(world: &mut RowWorld) {
-    for i in 1..5001 {
-        let row = Some(Row {
-            id: i,
-            username: String::from("admin"),
-            email: String::from("admin@web.net"),
-        });
-        world.max_rows.push(Statement {
-            stype: Some(StatementType::Insert),
-            row,
-        });
-    }
-}
-
-#[when("I execute A Statement until table is full")]
-fn execute_max_row(world: &mut RowWorld) {
-    for statement in &world.max_rows {
-        Statement::execute_statement(&statement, &mut world.table);
-    }
-}
-
-#[then("A Table is full")]
-fn check_full_table(world: &mut RowWorld) {
-    assert!(world.table.rows.len() == 5000);
 }
 
 fn main() {
