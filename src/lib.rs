@@ -39,12 +39,11 @@ pub mod repl {
             let mut statement = Statement {
                 stype: None,
                 row: None,
-                rtype: None,
             };
 
             match Statement::prepare_statement(&command, &mut statement, &db) {
                 PrepareResult::Success => {
-                    if let Some(exec_res) = Statement::execute_statement(&statement, &mut table) {
+                    if let Some(exec_res) = Statement::execute_statement(&statement, &mut db) {
                         match exec_res {
                             ExecuteResult::Success => println!("Executed"),
                         }
