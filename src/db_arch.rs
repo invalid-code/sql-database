@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs::{read_to_string, write};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RowType {
@@ -31,6 +32,24 @@ impl Table {
     }
 }
 
+pub fn open_file(path: &String) -> String {
+    loop {
+        match read_to_string(path.clone()) {
+            Ok(contents) => {
+                let db_file = contents;
+                return db_file;
+            }
+            Err(_) => {
+                write(&path, "").expect("couldn create database");
+            }
+        }
+    }
+}
+
+pub fn write_file(path: &String, contents: String) {
+    write(path, contents).expect("couldn create database");
+}
+
 impl Database {
     pub fn create_database() -> Database {
         Database {
@@ -39,6 +58,7 @@ impl Database {
             num_tables: 0,
         }
     }
+
     pub fn get_table(self: &Self, tname: String) -> Option<Table> {
         if let Some(tindex) = self.index.get(&tname) {
             if let Some(table) = &self.tables[tindex.to_owned() as usize] {
@@ -46,5 +66,13 @@ impl Database {
             }
         }
         None
+    }
+
+    pub fn contains_tables(self: &Self) -> bool {
+        if self.tables.len() < 1 {
+            false
+        } else {
+            true
+        }
     }
 }

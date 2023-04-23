@@ -15,10 +15,12 @@ pub mod repl {
     }
 
     pub fn cli() {
-        let mut db = Database::create_database();
+        let path = String::from("database.db");
+        let file = open_file(&path);
 
         loop {
             let mut command = String::new();
+            let mut db: Option<Database> = None;
 
             read_input(&mut command);
 
@@ -41,9 +43,11 @@ pub mod repl {
                 row: None,
             };
 
-            match Statement::prepare_statement(&command, &mut statement, &db) {
+            match Statement::prepare_statement(&command, &mut statement, db.as_ref()) {
                 PrepareResult::Success => {
-                    if let Some(exec_res) = Statement::execute_statement(&statement, &mut db) {
+                    if let Some(exec_res) =
+                        Statement::execute_statement(&statement, &mut db.unwrap())
+                    {
                         match exec_res {
                             ExecuteResult::Success => println!("Executed"),
                         }
@@ -61,7 +65,12 @@ pub mod repl {
                     println!("Table does not exist");
                     continue;
                 }
+                PrepareResult::NoExistingDatabase => {
+                    println!("Database does not exist");
+                    continue;
+                }
             }
+            write_file(&path, file);
         }
     }
 }
