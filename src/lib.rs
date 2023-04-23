@@ -1,7 +1,9 @@
 mod command_processor;
+mod db_arch;
 
 pub mod repl {
     pub use crate::command_processor::*;
+    pub use crate::db_arch::*;
     use std::io::{stdin, stdout, Write};
 
     fn read_input(buf: &mut String) {
@@ -13,7 +15,7 @@ pub mod repl {
     }
 
     pub fn cli() {
-        let mut table = Table::create_table();
+        let mut db = Database::create_database();
 
         loop {
             let mut command = String::new();
@@ -39,8 +41,8 @@ pub mod repl {
                 row: None,
             };
 
-            match Statement::prepare_statement(&command, &mut statement, &table.num_rows) {
-                PrepareResult::Success => {
+            match Statement::prepare_statement(&command, &mut statement, &db) {
+                PrepareResult::Success(table) => {
                     if let Some(exec_res) = Statement::execute_statement(&statement, &mut table) {
                         match exec_res {
                             ExecuteResult::Success => println!("Executed"),
@@ -53,6 +55,10 @@ pub mod repl {
                 }
                 PrepareResult::SyntaxError => {
                     println!("syntax error");
+                    continue;
+                }
+                PrepareResult::NoExistingTable => {
+                    println!("Table does not exist");
                     continue;
                 }
             }

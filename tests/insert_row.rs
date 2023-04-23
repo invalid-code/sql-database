@@ -44,5 +44,5 @@ fn check_statement(world: &mut RowWorld) {
 }
 
 fn main() {
-    futures::executor::block_on(RowWorld::run("tests/features"));
+    futures::executor::block_on(RowWorld::run("tests/features/insert_row.feature"));
 }
