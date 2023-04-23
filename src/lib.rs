@@ -42,19 +42,19 @@ pub mod repl {
             };
 
             match Statement::prepare_statement(&command, &mut statement, &db) {
-                PrepareResult::Success(table) => {
+                PrepareResult::Success(mut table) => {
                     if let Some(exec_res) = Statement::execute_statement(&statement, &mut table) {
                         match exec_res {
                             ExecuteResult::Success => println!("Executed"),
                         }
                     }
                 }
-                PrepareResult::Unknown => {
-                    println!("Unknown statement found");
+                PrepareResult::Unknown(statement) => {
+                    println!("Unknown Statement found: {} statement found", statement);
                     continue;
                 }
-                PrepareResult::SyntaxError => {
-                    println!("syntax error");
+                PrepareResult::SyntaxError(statement) => {
+                    println!("Invalid Syntax found: {}", statement);
                     continue;
                 }
                 PrepareResult::NoExistingTable => {

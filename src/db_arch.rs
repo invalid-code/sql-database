@@ -1,12 +1,9 @@
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Row {
-    // pub id: i32,
-    // pub username: String,
-    // pub email: String,
     pub rtype: RowType,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RowType {
     Insert(i32, String, String),
     Create(String, String),
