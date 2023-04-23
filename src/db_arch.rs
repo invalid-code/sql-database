@@ -1,29 +1,24 @@
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Row {
-    pub rtype: RowType,
-}
+use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RowType {
     Insert(i32, String, String),
+    Select(i32, String, String),
     Create(String, String),
-}
-
-impl Default for RowType {
-    fn default() -> Self {
-        Self::Create(String::from("table"), String::from("table"))
-    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Table {
     pub num_rows: i32,
-    pub rows: Vec<Option<Row>>,
+    pub rows: Vec<Option<RowType>>,
     pub name: String,
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Database {
     pub tables: Vec<Option<Table>>,
+    pub index: HashMap<String, i32>,
+    pub num_tables: i32,
 }
 
 impl Table {
@@ -38,6 +33,10 @@ impl Table {
 
 impl Database {
     pub fn create_database() -> Database {
-        Database { tables: vec![] }
+        Database {
+            tables: vec![],
+            index: HashMap::new(),
+            num_tables: 0,
+        }
     }
 }

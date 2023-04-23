@@ -1,0 +1,6 @@
+
+Todo:
+  ☐ make the database persistant
+    ☐ make create statements work
+    ☐ fix bugs to make old code work with the new design
+  ☐ add the ability to open a database

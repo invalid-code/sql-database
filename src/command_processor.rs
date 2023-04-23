@@ -7,9 +7,9 @@ pub enum MetaCommandResult {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum PrepareResult {
-    Success(Table),
-    Unknown(String),
-    SyntaxError(String),
+    Success,
+    Unknown,
+    SyntaxError,
     NoExistingTable,
 }
 
@@ -29,7 +29,7 @@ pub enum StatementType {
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct Statement {
     pub stype: Option<StatementType>,
-    pub row: Option<Row>,
+    pub row: Option<RowType>,
 }
 
 pub fn execute_meta_command(cmd: &String) -> Option<MetaCommandResult> {
@@ -48,56 +48,49 @@ impl Statement {
         db: &Database,
     ) -> PrepareResult {
         if &cmd[..6] == "insert" {
-            return StatementType::prepare_insert(cmd, statement, None);
+            return StatementType::prepare_insert(cmd, statement);
         }
 
         if &cmd[..6] == "select" {
             statement.stype = Some(StatementType::Select);
-            return PrepareResult::Success(db.tables[0].clone().unwrap());
+            return PrepareResult::Success;
         }
 
         if &cmd[..5] == "create" {
             statement.stype = Some(StatementType::Create);
-            return PrepareResult::Success(db.tables[0].clone().unwrap());
+            return PrepareResult::Success;
         }
 
-        PrepareResult::Unknown(cmd.to_owned())
+        PrepareResult::Unknown
     }
-    pub fn execute_statement(statement: &Statement, table: &mut Table) -> Option<ExecuteResult> {
-        // let db
-        if let Some(stype) = statement.stype {
-            match statement.stype {
-                StatementType::Insert => Some(StatementType::execute_insert(statement, table)),
-                StatementType::Select => Some(StatementType::execute_select(table)),
-                StatementType::Create => Some(StatementType::execute_create(statement, db)),
-                // _ => None,
-            }
+
+    pub fn execute_statement(
+        statement: &Statement,
+        // table: &mut Table,
+        db: &mut Database,
+    ) -> Option<ExecuteResult> {
+        match statement.stype {
+            Some(StatementType::Insert) => Some(StatementType::execute_insert(statement, table)),
+            Some(StatementType::Select) => Some(StatementType::execute_select(table)),
+            Some(StatementType::Create) => Some(StatementType::execute_create(statement, db)),
+            _ => None,
         }
-        // None
     }
 }
 
 impl StatementType {
-    fn prepare_insert(
-        cmd: &String,
-        statement: &mut Statement,
-        table: Option<Table>,
-    ) -> PrepareResult {
-        match table {
-            Some(table) => {
-                statement.stype = Some(StatementType::Insert);
-                let args: Vec<&str> = cmd[7..].split(" ").collect();
-                if args.len() < 2 {
-                    return PrepareResult::SyntaxError(format!("{:?}", args));
-                }
-
-                statement.row = Some(Row {
-                    rtype: RowType::Insert(table.num_rows, args[0].to_owned(), args[1].to_owned()),
-                });
-                return PrepareResult::Success(table);
-            }
-            None => PrepareResult::NoExistingTable,
+    fn prepare_insert(cmd: &String, statement: &mut Statement, table: &mut Table) -> PrepareResult {
+        statement.stype = Some(StatementType::Insert);
+        let args: Vec<&str> = cmd[7..].split(" ").collect();
+        if args.len() < 2 {
+            return PrepareResult::SyntaxError;
         }
+        statement.row = Some(Row {
+            id: table.num_rows,
+            email: args[0].to_owned(),
+            username: args[1].to_owned(),
+        });
+        return PrepareResult::Success;
     }
 
     fn execute_insert(statement: &Statement, table: &mut Table) -> ExecuteResult {
@@ -112,12 +105,7 @@ impl StatementType {
     fn execute_select(table: &Table) -> ExecuteResult {
         for row in &table.rows {
             if let Some(row) = row {
-                match &row.rtype {
-                    RowType::Insert(id, email, username) => {
-                        print!("{} {} {}", id, email, username);
-                    }
-                    _ => (),
-                }
+                print!("{} {} {}", row.id, row.email, row.username);
             }
         }
         ExecuteResult::Success
@@ -125,13 +113,10 @@ impl StatementType {
 
     fn execute_create(statement: &Statement, db: &mut Database) -> ExecuteResult {
         if let Some(row) = &statement.row {
-            match &row.rtype {
-                RowType::Create(_, tname) => {
-                    let table = Table::create_table(tname.to_owned());
-                    db.tables.push(Some(table));
-                }
-                _ => (),
-            }
+            let table = Table::create_table(statement.tname);
+            db.tables.push(Some(table));
+            db.index.insert(statement.tname, db.num_tables + 1);
+            db.num_tables += 1;
         }
         ExecuteResult::Success
     }
