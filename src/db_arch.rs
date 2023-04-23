@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RowType {
-    Insert(i32, String, String),
-    Select(i32, String, String),
+    Insert(i32, String, String, String),
+    Select(i32, String, String, String),
     Create(String, String),
 }
 
@@ -38,5 +38,13 @@ impl Database {
             index: HashMap::new(),
             num_tables: 0,
         }
+    }
+    pub fn get_table(self: &Self, tname: String) -> Option<Table> {
+        if let Some(tindex) = self.index.get(&tname) {
+            if let Some(table) = &self.tables[tindex.to_owned() as usize] {
+                return Some(table.to_owned());
+            }
+        }
+        None
     }
 }

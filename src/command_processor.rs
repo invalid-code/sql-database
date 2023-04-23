@@ -48,7 +48,7 @@ impl Statement {
         db: &Database,
     ) -> PrepareResult {
         if &cmd[..6] == "insert" {
-            return StatementType::prepare_insert(cmd, statement);
+            return StatementType::prepare_insert(cmd, statement, db);
         }
 
         if &cmd[..6] == "select" {
@@ -75,58 +75,57 @@ impl Statement {
 }
 
 impl StatementType {
-    fn prepare_insert(cmd: &String, statement: &mut Statement, table: &mut Table) -> PrepareResult {
+    fn prepare_insert(cmd: &String, statement: &mut Statement, db: &Database) -> PrepareResult {
         statement.stype = Some(StatementType::Insert);
         let args: Vec<&str> = cmd[7..].split(" ").collect();
-        if args.len() < 2 {
+        if args.len() < 3 {
             return PrepareResult::SyntaxError;
         }
-        statement.row = Some(RowType::Insert(
-            table.num_rows,
-            args[0].to_owned(),
-            args[1].to_owned(),
-        ));
-        return PrepareResult::Success;
+        if let Some(table) = db.get_table(args[2].to_owned()) {
+            statement.row = Some(RowType::Insert(
+                table.num_rows,
+                args[0].to_owned(),
+                args[1].to_owned(),
+                table.name,
+            ));
+        }
+        PrepareResult::Success
     }
 
     fn execute_insert(statement: &Statement, db: &mut Database) -> ExecuteResult {
-        match db.index.get(&tname) {
-            Some(tindex) => {
-                let table = db.tables.get(tindex.to_owned() as usize).unwrap();
-                if let Some(table) = table {
+        if let Some(row) = &statement.row {
+            if let RowType::Insert(_, _, _, tname) = row {
+                if let Some(mut table) = db.get_table(tname.to_owned()) {
                     if let Some(row) = &statement.row {
                         table.rows.push(Some(row.to_owned()));
                     }
                     table.num_rows += 1;
                 }
             }
-            None => (),
         }
         ExecuteResult::Success
     }
 
     fn execute_select(statement: &Statement, db: &mut Database) -> ExecuteResult {
-        match db.index.get(&tname) {
-            Some(tindex) => {
-                let table = db.tables.get(tindex.to_owned() as usize).unwrap();
-                if let Some(table) = table {
+        if let Some(row) = &statement.row {
+            if let RowType::Select(_, _, _, tname) = row {
+                if let Some(table) = db.get_table(tname.to_owned()) {
                     for row in table.rows {
                         if let Some(row) = row {
-                            if let RowType::Select(id, email, username) = row {
+                            if let RowType::Select(id, email, username, _) = row {
                                 print!("{} {} {}", id, email, username);
                             }
                         }
                     }
                 }
             }
-            None => (),
         }
         ExecuteResult::Success
     }
 
     fn execute_create(statement: &Statement, db: &mut Database) -> ExecuteResult {
         if let Some(row) = &statement.row {
-            if let RowType::Create(data_struct, name) = row {
+            if let RowType::Create(_, name) = row {
                 let table = Table::create_table(name.to_owned());
                 db.tables.push(Some(table));
                 db.index.insert(name.to_owned(), db.num_tables + 1);
