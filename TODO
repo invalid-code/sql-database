@@ -1,6 +1,8 @@
-
 Todo:
-  ☐ make the database persistant
-    ☐ make create statements work
-    ☐ fix bugs to make old code work with the new design
-  ☐ add the ability to open a database
+  ☐ test to insert, select, create
+  ☐ make the database persistant @project(Todo)
+  ☐ add the ability to open a database @project(Todo)
+   
+Archive:
+  ✔ make create statements work @done(23-04-24 22:32) @project(Todo)
+  ✔ fix bugs to make old code work with the new design @done(23-04-24 22:32) @project(Todo)

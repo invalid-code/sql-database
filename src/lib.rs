@@ -33,8 +33,19 @@ pub mod repl {
                     StatementResult::Success => (),
                 },
                 Statement::Statement(statement) => match statement {
-                    StatementType::Insert(_, _, _) => todo!(),
-                    StatementType::Select(_, _, _) => todo!(),
+                    StatementType::Insert(id, email, username, dname, tname) => {
+                        StatementType::execute_insert(
+                            id,
+                            email,
+                            username,
+                            dname,
+                            tname,
+                            &mut per_db,
+                        );
+                    }
+                    StatementType::Select(dname, tname) => {
+                        StatementType::execute_select(dname, tname, &per_db);
+                    }
                     StatementType::Create(dstruct, dstructn, dname) => match dname {
                         Some(dname) => {
                             StatementType::execute_create(

@@ -2,16 +2,21 @@ use std::collections::HashMap;
 use std::fs::{read_to_string, write};
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum RowType {
-    Insert,
-    Select,
-    Create,
+// pub enum RowType {
+//     Insert,
+//     Select,
+//     Create,
+// }
+pub struct Row {
+    pub id: i32,
+    pub email: String,
+    pub username: String,
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Table {
     pub num_rows: i32,
-    pub rows: Vec<Option<RowType>>,
+    pub rows: Vec<Option<Row>>,
     pub name: String,
 }
 
