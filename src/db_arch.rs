@@ -22,6 +22,34 @@ pub struct Database {
     pub num_tables: i32,
 }
 
+struct PersistantDatabase {
+    dbs: Vec<Database>,
+}
+
+impl PersistantDatabase {
+    fn read_file(path: &String) -> String {
+        loop {
+            match read_to_string(path.clone()) {
+                Ok(contents) => {
+                    let db_file = contents;
+                    return db_file;
+                }
+                Err(_) => {
+                    write(&path, "").expect("couldn create database");
+                }
+            }
+        }
+    }
+
+    fn write_file(path: &String, contents: String) {
+        write(path, contents).expect("couldn create database");
+    }
+
+    fn read_database(path: &String) -> Self {
+        let file = read_file(path);
+    }
+}
+
 impl Table {
     pub fn create_table(name: String) -> Table {
         Table {
@@ -30,24 +58,6 @@ impl Table {
             name,
         }
     }
-}
-
-pub fn open_file(path: &String) -> String {
-    loop {
-        match read_to_string(path.clone()) {
-            Ok(contents) => {
-                let db_file = contents;
-                return db_file;
-            }
-            Err(_) => {
-                write(&path, "").expect("couldn create database");
-            }
-        }
-    }
-}
-
-pub fn write_file(path: &String, contents: String) {
-    write(path, contents).expect("couldn create database");
 }
 
 impl Database {
