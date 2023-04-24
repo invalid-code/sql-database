@@ -3,9 +3,9 @@ use std::fs::{read_to_string, write};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RowType {
-    Insert(i32, String, String, String),
-    Select(i32, String, String, String),
-    Create(String, String),
+    Insert,
+    Select,
+    Create,
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -15,43 +15,8 @@ pub struct Table {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Database {
-    pub tables: Vec<Option<Table>>,
-    pub index: HashMap<String, i32>,
-    pub num_tables: i32,
-}
-
-struct PersistantDatabase {
-    dbs: Vec<Database>,
-}
-
-impl PersistantDatabase {
-    fn read_file(path: &String) -> String {
-        loop {
-            match read_to_string(path.clone()) {
-                Ok(contents) => {
-                    let db_file = contents;
-                    return db_file;
-                }
-                Err(_) => {
-                    write(&path, "").expect("couldn create database");
-                }
-            }
-        }
-    }
-
-    fn write_file(path: &String, contents: String) {
-        write(path, contents).expect("couldn create database");
-    }
-
-    fn read_database(path: &String) -> Self {
-        let file = read_file(path);
-    }
-}
-
 impl Table {
-    pub fn create_table(name: String) -> Table {
+    pub fn create_table(name: String) -> Self {
         Table {
             num_rows: 0,
             rows: vec![],
@@ -60,8 +25,15 @@ impl Table {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Database {
+    pub tables: Vec<Option<Table>>,
+    pub index: HashMap<String, i32>,
+    pub num_tables: i32,
+}
+
 impl Database {
-    pub fn create_database() -> Database {
+    pub fn create_database() -> Self {
         Database {
             tables: vec![],
             index: HashMap::new(),
@@ -83,6 +55,29 @@ impl Database {
             false
         } else {
             true
+        }
+    }
+}
+
+pub struct PersistantDatabase {
+    pub dbs: Vec<Option<Database>>,
+    pub index: HashMap<String, i32>,
+    pub num_dbs: i32,
+}
+
+impl PersistantDatabase {
+    pub fn create_persistant_database() -> Self {
+        PersistantDatabase {
+            dbs: vec![],
+            index: HashMap::new(),
+            num_dbs: 0,
+        }
+    }
+
+    pub fn get_db(&self, dname: &String) -> Option<Database> {
+        match self.index.get(dname) {
+            Some(i) => self.dbs[i.to_owned() as usize].clone(),
+            None => None,
         }
     }
 }
