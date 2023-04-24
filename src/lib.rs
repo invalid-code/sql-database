@@ -24,21 +24,30 @@ pub mod repl {
 
             read_input(&mut command);
 
-            match StatementType::parse_statement(&command) {
-                StatementType::Insert(_, _, _) => todo!(),
-                StatementType::Select(_, _, _) => todo!(),
-                StatementType::Create(dstruct, dstructn, dname) => match dname {
-                    Some(dname) => StatementType::execute_create(
-                        dstruct,
-                        dstructn,
-                        per_db.get_db(&dname),
-                        &mut per_db,
-                    ),
-                    None => StatementType::execute_create(dstruct, dstructn, None, &mut per_db),
+            match Statement::parse_statement(&command) {
+                Statement::Result(val) => match val {
+                    StatementResult::Err(err) => match err {
+                        StatementErr::Unknown => println!("unknown statement found"),
+                        StatementErr::SyntaxErr => println!("invalid statement found"),
+                    },
+                    StatementResult::Success => (),
                 },
-                StatementType::Err(err) => match err {
-                    StatementErr::Unknown => println!("unknown statement found!"),
-                    StatementErr::SyntaxErr => println!("invalid statement found!"),
+                Statement::Statement(statement) => match statement {
+                    StatementType::Insert(_, _, _) => todo!(),
+                    StatementType::Select(_, _, _) => todo!(),
+                    StatementType::Create(dstruct, dstructn, dname) => match dname {
+                        Some(dname) => {
+                            StatementType::execute_create(
+                                dstruct,
+                                dstructn,
+                                per_db.get_db(&dname),
+                                &mut per_db,
+                            );
+                        }
+                        None => {
+                            StatementType::execute_create(dstruct, dstructn, None, &mut per_db);
+                        }
+                    },
                 },
             }
         }
