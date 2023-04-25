@@ -60,8 +60,8 @@ impl Database {
         }
     }
 
-    pub fn push_db(&self, table: Table) {
-        self.tables.push(Some(table));
+    pub fn push_db(&mut self, table: &Table) {
+        self.tables.push(Some(table.to_owned()));
         self.index
             .insert(table.tname.clone(), self.num_tables.clone());
         self.num_tables += 1;
@@ -90,8 +90,8 @@ impl PersistantDatabase {
         }
     }
 
-    pub fn push_per_db(&self, db: Database) {
-        self.dbs.push(Some(db));
+    pub fn push_per_db(&mut self, db: &Database) {
+        self.dbs.push(Some(db.to_owned()));
         self.index.insert(db.dname.clone(), self.num_dbs.clone());
         self.num_dbs += 1;
     }

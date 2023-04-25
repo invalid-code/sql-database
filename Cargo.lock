@@ -518,6 +518,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fed44880c466736ef9a5c5b5facefb5ed0785676d0c02d612db14e54f0d84286"
 
 [[package]]
+name = "honeycomb"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e2a778c9184a2098b6a0d7daf96f04dde62ad15dc9db5c056777c54a1bfbfc5"
+
+[[package]]
 name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -856,6 +862,7 @@ version = "0.1.0"
 dependencies = [
  "cucumber",
  "futures",
+ "honeycomb",
 ]
 
 [[package]]

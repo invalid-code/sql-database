@@ -1,5 +1,9 @@
 Feature: Insert Row
 
+  Background: 
+    Given a permanent database
+    And a database
+
   Scenario: insert 1 row
     Given a command
     And a table

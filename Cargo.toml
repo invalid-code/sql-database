@@ -10,3 +10,6 @@ futures = "0.3.28"
 [[test]]
 name = "insert_row"
 harness = false
+
+[dependencies]
+honeycomb = "0.1.4"
