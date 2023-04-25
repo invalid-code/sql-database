@@ -16,7 +16,6 @@ pub mod repl {
 
     pub fn cli() {
         let path = String::from("database.db");
-        // let db = Database::create_database();
         let mut per_db = PersistantDatabase::create_persistant_database();
 
         loop {
@@ -24,15 +23,8 @@ pub mod repl {
 
             read_input(&mut command);
 
-            match Statement::parse_statement(&command) {
-                Statement::Result(val) => match val {
-                    StatementResult::Err(err) => match err {
-                        StatementErr::Unknown => println!("unknown statement found"),
-                        StatementErr::SyntaxErr => println!("invalid statement found"),
-                    },
-                    StatementResult::Success => (),
-                },
-                Statement::Statement(statement) => match statement {
+            match StatementType::parse_statement(&command) {
+                Ok(statement) => match statement {
                     StatementType::Insert(id, email, username, dname, tname) => {
                         StatementType::execute_insert(
                             id,
@@ -60,6 +52,45 @@ pub mod repl {
                         }
                     },
                 },
+                Err(err) => match err {
+                    StatementErr::Unknown => println!("unknown statement found"),
+                    StatementErr::SyntaxErr => println!("invalid statement found"),
+                },
+                // Statement::Result(val) => match val {
+                //     StatementResult::Err(err) => match err {
+                //         StatementErr::Unknown => println!("unknown statement found"),
+                //         StatementErr::SyntaxErr => println!("invalid statement found"),
+                //     },
+                //     StatementResult::Success => (),
+                // },
+                // Statement::Statement(statement) => match statement {
+                //     StatementType::Insert(id, email, username, dname, tname) => {
+                //         StatementType::execute_insert(
+                //             id,
+                //             email,
+                //             username,
+                //             dname,
+                //             tname,
+                //             &mut per_db,
+                //         );
+                //     }
+                //     StatementType::Select(dname, tname) => {
+                //         StatementType::execute_select(dname, tname, &per_db);
+                //     }
+                //     StatementType::Create(dstruct, dstructn, dname) => match dname {
+                //         Some(dname) => {
+                //             StatementType::execute_create(
+                //                 dstruct,
+                //                 dstructn,
+                //                 per_db.get_db(&dname),
+                //                 &mut per_db,
+                //             );
+                //         }
+                //         None => {
+                //             StatementType::execute_create(dstruct, dstructn, None, &mut per_db);
+                //         }
+                //     },
+                // },
             }
         }
     }

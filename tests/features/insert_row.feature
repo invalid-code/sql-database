@@ -1,10 +1,7 @@
 Feature: Insert Row
 
-  Background: 
-    Given A Table
-    And A Execute Result
-
   Scenario: insert 1 row
-    Given A Statement
-    When I execute A Statement
-    Then A Statement should be executed
+    Given a command
+    And a table
+    When I execute the command
+    Then the command should be executed

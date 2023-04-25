@@ -1,13 +1,9 @@
 use crate::db_arch::*;
 
+#[derive(Debug)]
 pub enum StatementErr {
     Unknown,
     SyntaxErr,
-}
-
-pub enum StatementResult {
-    Err(StatementErr),
-    Success,
 }
 
 pub enum ExecuteErr {
@@ -15,11 +11,12 @@ pub enum ExecuteErr {
     TableDoesNotExist,
 }
 
-pub enum ExecuteResult {
-    Success,
-    Err(ExecuteErr),
-}
+// pub enum ExecuteResult {
+//     Success,
+//     Err(ExecuteErr),
+// }
 
+#[derive(Debug)]
 pub enum StatementType {
     Insert(i32, String, String, String, String),
     Select(String, String),
@@ -32,28 +29,22 @@ impl StatementType {
         dstructn: String,
         db: Option<Database>,
         per_db: &mut PersistantDatabase,
-    ) -> ExecuteResult {
+    ) -> Result<(), ExecuteErr> {
         if dstruct == "db" {
-            per_db.dbs.push(Some(Database::create_database()));
-            per_db
-                .index
-                .insert(dstructn.clone(), per_db.num_dbs.clone());
-            per_db.num_dbs += 1;
+            per_db.push_per_db(Database::create_database(dstructn));
         }
         if dstruct == "table" {
-            let table = Table::create_table(dstruct);
             match db {
                 Some(mut db) => {
-                    db.tables.push(Some(table));
-                    db.index.insert(dstructn.clone(), db.num_tables.clone());
-                    db.num_tables += 1;
+                    let table = Table::create_table(dstructn.clone());
+                    db.push_db(table)
                 }
                 None => {
-                    return ExecuteResult::Err(ExecuteErr::DatabaseDoesNotExist);
+                    return Err(ExecuteErr::DatabaseDoesNotExist);
                 }
             }
         }
-        ExecuteResult::Success
+        Ok(())
     }
 
     pub fn execute_insert(
@@ -63,7 +54,7 @@ impl StatementType {
         dname: String,
         tname: String,
         per_db: &PersistantDatabase,
-    ) -> ExecuteResult {
+    ) -> Result<(), ExecuteErr> {
         match per_db.get_db(&dname) {
             Some(db) => match db.get_table(tname) {
                 Some(mut table) => {
@@ -74,18 +65,18 @@ impl StatementType {
                     };
                     table.rows.push(Some(row));
                 }
-                None => return ExecuteResult::Err(ExecuteErr::TableDoesNotExist),
+                None => return Err(ExecuteErr::TableDoesNotExist),
             },
-            None => return ExecuteResult::Err(ExecuteErr::DatabaseDoesNotExist),
+            None => return Err(ExecuteErr::DatabaseDoesNotExist),
         }
-        ExecuteResult::Success
+        Ok(())
     }
 
     pub fn execute_select(
         dname: String,
         tname: String,
         per_db: &PersistantDatabase,
-    ) -> ExecuteResult {
+    ) -> Result<(), ExecuteErr> {
         match per_db.get_db(&dname) {
             Some(db) => match db.get_table(tname) {
                 Some(table) => {
@@ -96,27 +87,22 @@ impl StatementType {
                         }
                     }
                 }
-                None => return ExecuteResult::Err(ExecuteErr::TableDoesNotExist),
+                None => return Err(ExecuteErr::TableDoesNotExist),
             },
-            None => return ExecuteResult::Err(ExecuteErr::DatabaseDoesNotExist),
+            None => return Err(ExecuteErr::DatabaseDoesNotExist),
         }
-        ExecuteResult::Success
+        Ok(())
     }
 }
 
-pub enum Statement {
-    Result(StatementResult),
-    Statement(StatementType),
-}
-
-impl Statement {
-    pub fn parse_statement(cmd: &String) -> Self {
+impl StatementType {
+    pub fn parse_statement(cmd: &String) -> Result<StatementType, StatementErr> {
         if &cmd[..6] == "insert" {
             let args = cmd[7..].split(" ").collect::<Vec<&str>>();
             if args.len() < 5 {
-                return Self::Result(StatementResult::Err(StatementErr::SyntaxErr));
+                return Err(StatementErr::SyntaxErr);
             }
-            return Self::Statement(StatementType::Insert(
+            return Ok(StatementType::Insert(
                 std::str::FromStr::from_str(args[0]).unwrap(),
                 args[1].to_owned(),
                 args[2].to_owned(),
@@ -128,33 +114,33 @@ impl Statement {
         if &cmd[..6] == "select" {
             let args = cmd[7..].split(" ").collect::<Vec<&str>>();
             if args.len() < 2 {
-                return Self::Result(StatementResult::Err(StatementErr::SyntaxErr));
+                return Err(StatementErr::SyntaxErr);
             }
-            return Self::Statement(StatementType::Select(
+            return Ok(Self::Select(
                 std::str::FromStr::from_str(args[0]).unwrap(),
                 args[1].to_owned(),
             ));
         }
 
-        if &cmd[..5] == "create" {
+        if &cmd[..6] == "create" {
             let args = cmd[6..].split(" ").collect::<Vec<&str>>();
-            if args.len() < 3 {
-                return Self::Statement(StatementType::Create(
+            if args.len() == 3 {
+                return Ok(StatementType::Create(
                     args[0].to_owned(),
                     args[1].to_owned(),
                     Some(args[2].to_owned()),
                 ));
             }
-            if args.len() < 2 {
-                return Self::Statement(StatementType::Create(
+            if args.len() == 2 {
+                return Ok(StatementType::Create(
                     args[0].to_owned(),
                     args[1].to_owned(),
                     None,
                 ));
             }
-            return Self::Result(StatementResult::Err(StatementErr::SyntaxErr));
+            return Err(StatementErr::SyntaxErr);
         }
 
-        Self::Result(StatementResult::Err(StatementErr::Unknown))
+        Err(StatementErr::Unknown)
     }
 }
