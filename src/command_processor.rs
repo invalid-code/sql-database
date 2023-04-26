@@ -54,19 +54,14 @@ impl StatementType {
         tname: &str,
         per_db: &mut PersistantDatabase,
     ) -> Result<(), ExecuteErr> {
-        match per_db.get_db(dname) {
-            Some(mut db) => match db.get_table(tname) {
-                Some(mut table) => {
-                    let row = Row {
-                        id,
-                        email,
-                        username,
-                    };
-                    table.rows.push(row);
-                }
-                None => return Err(ExecuteErr::TableDoesNotExist),
-            },
-            None => return Err(ExecuteErr::DatabaseDoesNotExist),
+        let row = Row {
+            id,
+            email,
+            username,
+        };
+        match per_db.push_row(dname, tname, row) {
+            Ok(_) => (),
+            Err(err) => return Err(err),
         }
         Ok(())
     }

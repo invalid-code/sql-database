@@ -102,6 +102,22 @@ impl PersistantDatabase {
         Ok(())
     }
 
+    pub fn push_row(&mut self, dname: &str, tname: &str, row: Row) -> Result<(), ExecuteErr> {
+        match self.index.get(dname) {
+            Some(dindex) => {
+                let db = &mut self.dbs[dindex.to_owned() as usize];
+                match db.index.get(tname) {
+                    Some(tindex) => {
+                        db.tables[tindex.to_owned() as usize].rows.push(row);
+                    }
+                    None => return Err(ExecuteErr::TableDoesNotExist),
+                }
+            }
+            None => return Err(ExecuteErr::DatabaseDoesNotExist),
+        }
+        Ok(())
+    }
+
     pub fn push_db(&mut self, db: &Database) {
         self.dbs.push(db.to_owned());
         self.index.insert(db.dname.clone(), self.num_dbs.clone());
