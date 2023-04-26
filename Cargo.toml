@@ -3,13 +3,13 @@ name = "sql_database"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+honeycomb = "0.1.4"
+
 [dev-dependencies]
 cucumber = "0.19.1"
 futures = "0.3.28"
 
 [[test]]
-name = "insert_row"
+name = "statements"
 harness = false
-
-[dependencies]
-honeycomb = "0.1.4"
