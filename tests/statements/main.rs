@@ -1,5 +1,6 @@
-use cucumber::{given, World};
-use sql_database::repl::{Database, PersistantDatabase, Table};
+use cucumber::{given, when, World};
+use sql_database::repl::{Database, PersistantDatabase, StatementType, Table};
+mod create;
 mod insert;
 
 #[derive(Debug, World, Default)]
@@ -26,6 +27,11 @@ fn create_table(world: &mut StatementWorld) {
         Ok(_) => (),
         Err(err) => panic!("{:?}", err),
     }
+}
+
+#[when("I execute the command")]
+fn execute_insert_one(world: &mut StatementWorld) {
+    StatementType::execute_statement(&world.command, &mut world.per_db);
 }
 
 fn main() {
