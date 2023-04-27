@@ -1,5 +1,5 @@
 Todo:
-  ☐ test to insert, select, create
+  ✔ test to insert, select, create @done(23-04-27 18:18)
   ☐ make the database persistant @project(Todo)
   ☐ add the ability to open a database @project(Todo)
    

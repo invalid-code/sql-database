@@ -31,7 +31,7 @@ fn create_table(world: &mut StatementWorld) {
 
 #[when("I execute the command")]
 fn execute_insert_one(world: &mut StatementWorld) {
-    StatementType::execute_statement(&world.command, &mut world.per_db);
+    StatementType::execute_statement(&world.command, Some(&mut world.per_db));
 }
 
 fn main() {

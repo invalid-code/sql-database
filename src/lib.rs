@@ -17,7 +17,8 @@ pub mod repl {
     pub fn cli() {
         // let path = String::from("database.db");
 
-        let mut per_db = PersistantDatabase::create_persistant_database();
+        // let mut per_db = PersistantDatabase::create_persistant_database();
+        let mut per_db: Option<PersistantDatabase> = None;
 
         loop {
             let mut command = String::new();
@@ -26,7 +27,7 @@ pub mod repl {
 
             MetaCommandType::execute_meta_command(&command);
 
-            StatementType::execute_statement(&command, &mut per_db);
+            StatementType::execute_statement(&command, per_db.as_mut());
         }
     }
 }

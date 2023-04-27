@@ -10,6 +10,7 @@ pub enum StatementErr {
 pub enum ExecuteErr {
     DatabaseDoesNotExist,
     TableDoesNotExist,
+    NoOpenDatabase,
 }
 
 #[derive(Debug)]
@@ -24,24 +25,22 @@ impl StatementType {
         dstruct: String,
         dstructn: String,
         dname: Option<&str>,
-        per_db: &mut PersistantDatabase,
+        per_db: Option<&mut PersistantDatabase>,
     ) -> Result<(), ExecuteErr> {
-        if dstruct == "db" {
-            let db = Database::create_database(dstructn.clone());
-            per_db.push_db(&db);
-        }
-        if dstruct == "table" {
-            let table = Table::create_table(dstructn.clone());
-            match dname {
-                Some(dname) => match per_db.push_table(dname, table) {
-                    Ok(_) => (),
-                    Err(err) => match err {
-                        ExecuteErr::DatabaseDoesNotExist => println!("database doesn't exist"),
-                        ExecuteErr::TableDoesNotExist => (),
-                    },
-                },
-                None => (),
+        match per_db {
+            Some(per_db) => {
+                if dstruct == "db" {
+                    let db = Database::create_database(dstructn.clone());
+                    per_db.push_db(&db);
+                }
+                if dstruct == "table" {
+                    let table = Table::create_table(dstructn.clone());
+                    if let Some(dname) = dname {
+                        return per_db.push_table(dname, table);
+                    }
+                }
             }
+            None => return Err(ExecuteErr::NoOpenDatabase),
         }
         Ok(())
     }
@@ -52,41 +51,42 @@ impl StatementType {
         username: String,
         dname: &str,
         tname: &str,
-        per_db: &mut PersistantDatabase,
+        per_db: Option<&mut PersistantDatabase>,
     ) -> Result<(), ExecuteErr> {
-        let row = Row {
-            id,
-            email,
-            username,
-        };
-        match per_db.push_row(dname, tname, row) {
-            Ok(_) => (),
-            Err(err) => return Err(err),
+        match per_db {
+            Some(per_db) => {
+                let row = Row {
+                    id,
+                    email,
+                    username,
+                };
+                return per_db.push_row(dname, tname, row);
+            }
+            None => return Err(ExecuteErr::NoOpenDatabase),
         }
-        Ok(())
     }
 
     pub fn execute_select(
         dname: &str,
         tname: &str,
-        per_db: &mut PersistantDatabase,
+        per_db: Option<&mut PersistantDatabase>,
     ) -> Result<(), ExecuteErr> {
-        match per_db.get_db(dname) {
-            Some(mut db) => match db.get_table(tname) {
-                Some(table) => {
-                    for row in &table.rows {
-                        println!("{} {} {}", row.id, row.email, row.username);
+        match per_db {
+            Some(per_db) => match per_db.get_db(dname) {
+                Some(mut db) => match db.get_table(tname) {
+                    Some(table) => {
+                        for row in &table.rows {
+                            println!("{} {} {}", row.id, row.email, row.username);
+                        }
                     }
-                }
-                None => return Err(ExecuteErr::TableDoesNotExist),
+                    None => return Err(ExecuteErr::TableDoesNotExist),
+                },
+                None => return Err(ExecuteErr::DatabaseDoesNotExist),
             },
-            None => return Err(ExecuteErr::DatabaseDoesNotExist),
+            None => return Err(ExecuteErr::NoOpenDatabase),
         }
         Ok(())
     }
-}
-
-impl StatementType {
     pub fn parse_statement(cmd: &str) -> Result<Self, StatementErr> {
         if &cmd[..6] == "insert" {
             let args = cmd[7..].split(" ").collect::<Vec<&str>>();
@@ -131,7 +131,7 @@ impl StatementType {
         Err(StatementErr::Unknown)
     }
 
-    pub fn execute_statement(command: &str, per_db: &mut PersistantDatabase) {
+    pub fn execute_statement(command: &str, per_db: Option<&mut PersistantDatabase>) {
         match StatementType::parse_statement(command) {
             Ok(statement) => match statement {
                 StatementType::Insert(id, email, username, dname, tname) => {
@@ -151,6 +151,9 @@ impl StatementType {
                             ExecuteErr::TableDoesNotExist => {
                                 println!("table does not exist!");
                             }
+                            ExecuteErr::NoOpenDatabase => {
+                                println!("no open database")
+                            }
                         },
                     }
                 }
@@ -163,6 +166,9 @@ impl StatementType {
                             }
                             ExecuteErr::TableDoesNotExist => {
                                 println!("table does not exist!");
+                            }
+                            ExecuteErr::NoOpenDatabase => {
+                                println!("no open database")
                             }
                         },
                     }
@@ -179,6 +185,9 @@ impl StatementType {
                                 ExecuteErr::TableDoesNotExist => {
                                     println!("table does not exist!");
                                 }
+                                ExecuteErr::NoOpenDatabase => {
+                                    println!("no open database");
+                                }
                             },
                         }
                     }
@@ -190,6 +199,9 @@ impl StatementType {
                             }
                             ExecuteErr::TableDoesNotExist => {
                                 println!("table does not exist!");
+                            }
+                            ExecuteErr::NoOpenDatabase => {
+                                println!("no open database");
                             }
                         },
                     },
@@ -222,6 +234,9 @@ impl MetaCommandType {
             if &cmd[2..5] == "exit" {
                 return Ok(Self::Exit);
             }
+            if &cmd[2..6] == "open" {
+                return Ok(Self::Open(cmd[7..].to_owned()));
+            }
         }
         Err(MetaCommandErr::Unknown)
     }
@@ -233,7 +248,7 @@ impl MetaCommandType {
                     println!("Goodbye!");
                     std::process::exit(0);
                 }
-                MetaCommandType::Open(_) => todo!(),
+                MetaCommandType::Open(dname) => {}
             },
             Err(_err) => (),
             // match err {

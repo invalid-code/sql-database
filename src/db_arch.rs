@@ -1,6 +1,7 @@
 use super::command_processor::ExecuteErr;
 use std::collections::HashMap;
-// use std::fs::{read_to_string, write};
+use std::fs::{read_to_string, write};
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Row {
@@ -74,6 +75,13 @@ pub struct PersistantDatabase {
     pub num_dbs: i32,
 }
 
+pub struct UnknownDbErr;
+
+pub enum PersistantDatabaseErr {
+    UnknownDbErr(UnknownDbErr),
+    ReadingErr(std::io::Error),
+}
+
 impl PersistantDatabase {
     pub fn create_persistant_database() -> Self {
         PersistantDatabase {
@@ -123,4 +131,34 @@ impl PersistantDatabase {
         self.index.insert(db.dname.clone(), self.num_dbs.clone());
         self.num_dbs += 1;
     }
+
+    pub fn open_db(file: &str) -> Result<Self, PersistantDatabaseErr> {
+        match read_file(file) {
+            Ok(db) => match db.parse::<PersistantDatabase>() {
+                Ok(db) => Ok(db),
+                Err(err) => Err(PersistantDatabaseErr::UnknownDbErr(err)),
+            },
+            Err(err) => Err(PersistantDatabaseErr::ReadingErr(err)),
+        }
+    }
+
+    pub fn save_db(file: &str, db: PersistantDatabase) -> Result<(), std::io::Error> {
+        write(file, format!("{:?}", db))
+    }
+}
+
+impl FromStr for PersistantDatabase {
+    type Err = UnknownDbErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<Self>()
+    }
+}
+
+pub fn write_file(file: &str, db: &str) -> Result<(), std::io::Error> {
+    write(file, db)
+}
+
+pub fn read_file(file: &str) -> Result<String, std::io::Error> {
+    read_to_string(file)
 }
