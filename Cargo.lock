@@ -878,6 +878,8 @@ dependencies = [
  "cucumber",
  "futures",
  "honeycomb",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

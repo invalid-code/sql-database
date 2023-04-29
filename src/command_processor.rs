@@ -184,6 +184,7 @@ impl StatementType {
 #[derive(Debug)]
 pub enum MetaCommandErr {
     Unknown,
+    NotMetaCommand,
 }
 
 pub enum MetaCommandType {
@@ -193,20 +194,25 @@ pub enum MetaCommandType {
 
 impl MetaCommandType {
     pub fn parse_meta_command(cmd: &String) -> Result<Self, MetaCommandErr> {
-        if &cmd[..1] == "." {
-            if &cmd[1..5] == "exit" {
+        let meta_args = cmd.split(" ").collect::<Vec<&str>>();
+        let meta_cmdt = meta_args[0];
+        if &meta_cmdt[..1] == "." {
+            if &meta_cmdt[1..5] == "exit" {
                 return Ok(Self::Exit);
             }
-            if &cmd[1..5] == "open" {
-                return Ok(Self::Open(cmd[7..].to_owned()));
+            if &meta_cmdt[1..5] == "open" {
+                return Ok(Self::Open(meta_args[1].trim().to_string()));
             }
+            Err(MetaCommandErr::Unknown)
+        } else {
+            Err(MetaCommandErr::NotMetaCommand)
         }
-        Err(MetaCommandErr::Unknown)
     }
 
     pub fn execute_meta_command(
         cmd: &String,
         per_db: &mut Option<PersistantDatabase>,
+        per_db_name: &mut Option<String>,
     ) -> Result<(), MetaCommandErr> {
         match Self::parse_meta_command(cmd) {
             Ok(command) => match command {
@@ -217,20 +223,20 @@ impl MetaCommandType {
                 MetaCommandType::Open(dname) => match PersistantDatabase::open_db(dname.as_str()) {
                     Ok(existing_db) => {
                         *per_db = Some(existing_db);
+                        *per_db_name = Some(dname);
                     }
                     Err(err) => match err {
-                        PersistantDatabaseErr::UnknownDbErr(_) => (),
-                        PersistantDatabaseErr::ReadingErr(_) => {
+                        PersistantDatabaseErr::UnknownDbErr => (),
+                        PersistantDatabaseErr::ReadingErr => {
                             let new_per_db = PersistantDatabase::create_persistant_database();
+                            PersistantDatabase::save_db(&dname, &new_per_db);
                             *per_db = Some(new_per_db);
+                            *per_db_name = Some(dname);
                         }
                     },
                 },
             },
             Err(err) => return Err(err),
-            // match err {
-            //     MetaCommandErr::Unknown => println!("unknown meta command found!"),
-            // },
         }
         Ok(())
     }

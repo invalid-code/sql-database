@@ -1,16 +1,16 @@
 use super::command_processor::ExecuteErr;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{read_to_string, write};
-use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Row {
     pub id: i32,
     pub email: String,
     pub username: String,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Table {
     pub num_rows: i32,
     pub rows: Vec<Row>,
@@ -27,7 +27,7 @@ impl Table {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Database {
     pub tables: Vec<Table>,
     pub index: HashMap<String, i32>,
@@ -68,18 +68,16 @@ impl Database {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct PersistantDatabase {
     pub dbs: Vec<Database>,
     pub index: HashMap<String, i32>,
     pub num_dbs: i32,
 }
 
-pub struct UnknownDbErr;
-
 pub enum PersistantDatabaseErr {
-    UnknownDbErr(UnknownDbErr),
-    ReadingErr(std::io::Error),
+    UnknownDbErr,
+    ReadingErr,
 }
 
 impl PersistantDatabase {
@@ -134,24 +132,16 @@ impl PersistantDatabase {
 
     pub fn open_db(file: &str) -> Result<Self, PersistantDatabaseErr> {
         match read_file(file) {
-            Ok(db) => match db.parse::<PersistantDatabase>() {
+            Ok(db) => match serde_json::from_str(&db) {
                 Ok(db) => Ok(db),
-                Err(err) => Err(PersistantDatabaseErr::UnknownDbErr(err)),
+                Err(_) => Err(PersistantDatabaseErr::UnknownDbErr),
             },
-            Err(err) => Err(PersistantDatabaseErr::ReadingErr(err)),
+            Err(_) => Err(PersistantDatabaseErr::ReadingErr),
         }
     }
 
-    pub fn save_db(file: &str, db: PersistantDatabase) -> Result<(), std::io::Error> {
-        write(file, format!("{:?}", db))
-    }
-}
-
-impl FromStr for PersistantDatabase {
-    type Err = UnknownDbErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse::<Self>()
+    pub fn save_db(file: &str, db: &PersistantDatabase) -> Result<(), std::io::Error> {
+        write(file, serde_json::to_string(db).unwrap())
     }
 }
 
