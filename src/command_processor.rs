@@ -1,7 +1,12 @@
 use crate::db_arch::*;
 
-#[derive(Debug)]
 pub enum StatementErr {
+    Prepare(PrepareErr),
+    Execute(ExecuteErr),
+}
+
+#[derive(Debug)]
+pub enum PrepareErr {
     Unknown,
     SyntaxErr,
 }
@@ -87,11 +92,11 @@ impl StatementType {
         }
         Ok(())
     }
-    pub fn parse_statement(cmd: &str) -> Result<Self, StatementErr> {
+    pub fn parse_statement(cmd: &str) -> Result<Self, PrepareErr> {
         if &cmd[..6] == "insert" {
             let args = cmd[7..].split(" ").collect::<Vec<&str>>();
             if args.len() < 5 {
-                return Err(StatementErr::SyntaxErr);
+                return Err(PrepareErr::SyntaxErr);
             }
             return Ok(Self::Insert(
                 std::str::FromStr::from_str(args[0]).unwrap(),
@@ -105,7 +110,7 @@ impl StatementType {
         if &cmd[..6] == "select" {
             let args = cmd[7..].split(" ").collect::<Vec<&str>>();
             if args.len() < 2 {
-                return Err(StatementErr::SyntaxErr);
+                return Err(PrepareErr::SyntaxErr);
             }
             return Ok(Self::Select(
                 std::str::FromStr::from_str(args[0]).unwrap(),
@@ -125,13 +130,16 @@ impl StatementType {
             if args.len() == 2 {
                 return Ok(Self::Create(args[0].to_owned(), args[1].to_owned(), None));
             }
-            return Err(StatementErr::SyntaxErr);
+            return Err(PrepareErr::SyntaxErr);
         }
 
-        Err(StatementErr::Unknown)
+        Err(PrepareErr::Unknown)
     }
 
-    pub fn execute_statement(command: &str, per_db: Option<&mut PersistantDatabase>) {
+    pub fn execute_statement(
+        command: &str,
+        per_db: Option<&mut PersistantDatabase>,
+    ) -> Result<(), StatementErr> {
         match StatementType::parse_statement(command) {
             Ok(statement) => match statement {
                 StatementType::Insert(id, email, username, dname, tname) => {
@@ -144,33 +152,13 @@ impl StatementType {
                         per_db,
                     ) {
                         Ok(_) => (),
-                        Err(err) => match err {
-                            ExecuteErr::DatabaseDoesNotExist => {
-                                println!("database does not exist!");
-                            }
-                            ExecuteErr::TableDoesNotExist => {
-                                println!("table does not exist!");
-                            }
-                            ExecuteErr::NoOpenDatabase => {
-                                println!("no open database")
-                            }
-                        },
+                        Err(err) => return Err(StatementErr::Execute(err)),
                     }
                 }
                 StatementType::Select(dname, tname) => {
                     match StatementType::execute_select(dname.as_str(), tname.as_str(), per_db) {
                         Ok(_) => (),
-                        Err(err) => match err {
-                            ExecuteErr::DatabaseDoesNotExist => {
-                                println!("database does not exist!");
-                            }
-                            ExecuteErr::TableDoesNotExist => {
-                                println!("table does not exist!");
-                            }
-                            ExecuteErr::NoOpenDatabase => {
-                                println!("no open database")
-                            }
-                        },
+                        Err(err) => return Err(StatementErr::Execute(err)),
                     }
                 }
                 StatementType::Create(dstruct, dstructn, dname) => match dname {
@@ -178,47 +166,22 @@ impl StatementType {
                         match StatementType::execute_create(dstruct, dstructn, Some(&dname), per_db)
                         {
                             Ok(_) => (),
-                            Err(err) => match err {
-                                ExecuteErr::DatabaseDoesNotExist => {
-                                    println!("database does not exist!");
-                                }
-                                ExecuteErr::TableDoesNotExist => {
-                                    println!("table does not exist!");
-                                }
-                                ExecuteErr::NoOpenDatabase => {
-                                    println!("no open database");
-                                }
-                            },
+                            Err(err) => return Err(StatementErr::Execute(err)),
                         }
                     }
                     None => match StatementType::execute_create(dstruct, dstructn, None, per_db) {
                         Ok(_) => (),
-                        Err(err) => match err {
-                            ExecuteErr::DatabaseDoesNotExist => {
-                                println!("database does not exist!");
-                            }
-                            ExecuteErr::TableDoesNotExist => {
-                                println!("table does not exist!");
-                            }
-                            ExecuteErr::NoOpenDatabase => {
-                                println!("no open database");
-                            }
-                        },
+                        Err(err) => return Err(StatementErr::Execute(err)),
                     },
                 },
             },
-            Err(err) => match err {
-                StatementErr::Unknown => {
-                    println!("unknown statement found!");
-                }
-                StatementErr::SyntaxErr => {
-                    println!("invalid statement found!");
-                }
-            },
+            Err(err) => return Err(StatementErr::Prepare(err)),
         }
+        Ok(())
     }
 }
 
+#[derive(Debug)]
 pub enum MetaCommandErr {
     Unknown,
 }
@@ -231,29 +194,44 @@ pub enum MetaCommandType {
 impl MetaCommandType {
     pub fn parse_meta_command(cmd: &String) -> Result<Self, MetaCommandErr> {
         if &cmd[..1] == "." {
-            if &cmd[2..5] == "exit" {
+            if &cmd[1..5] == "exit" {
                 return Ok(Self::Exit);
             }
-            if &cmd[2..6] == "open" {
+            if &cmd[1..5] == "open" {
                 return Ok(Self::Open(cmd[7..].to_owned()));
             }
         }
         Err(MetaCommandErr::Unknown)
     }
 
-    pub fn execute_meta_command(cmd: &String) {
+    pub fn execute_meta_command(
+        cmd: &String,
+        per_db: &mut Option<PersistantDatabase>,
+    ) -> Result<(), MetaCommandErr> {
         match Self::parse_meta_command(cmd) {
             Ok(command) => match command {
                 MetaCommandType::Exit => {
                     println!("Goodbye!");
                     std::process::exit(0);
                 }
-                MetaCommandType::Open(dname) => {}
+                MetaCommandType::Open(dname) => match PersistantDatabase::open_db(dname.as_str()) {
+                    Ok(existing_db) => {
+                        *per_db = Some(existing_db);
+                    }
+                    Err(err) => match err {
+                        PersistantDatabaseErr::UnknownDbErr(_) => (),
+                        PersistantDatabaseErr::ReadingErr(_) => {
+                            let new_per_db = PersistantDatabase::create_persistant_database();
+                            *per_db = Some(new_per_db);
+                        }
+                    },
+                },
             },
-            Err(_err) => (),
+            Err(err) => return Err(err),
             // match err {
             //     MetaCommandErr::Unknown => println!("unknown meta command found!"),
             // },
         }
+        Ok(())
     }
 }

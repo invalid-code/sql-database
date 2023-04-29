@@ -13,3 +13,7 @@ futures = "0.3.28"
 [[test]]
 name = "statements"
 harness = false
+
+[[test]]
+name = "meta_commands"
+harness = false

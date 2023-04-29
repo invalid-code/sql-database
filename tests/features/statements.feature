@@ -1,4 +1,4 @@
-Feature: Saving to the db
+Feature: running statements
 
   Background: 
     Given a persistant database

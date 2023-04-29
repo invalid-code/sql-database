@@ -15,9 +15,6 @@ pub mod repl {
     }
 
     pub fn cli() {
-        // let path = String::from("database.db");
-
-        // let mut per_db = PersistantDatabase::create_persistant_database();
         let mut per_db: Option<PersistantDatabase> = None;
 
         loop {
@@ -25,9 +22,47 @@ pub mod repl {
 
             read_input(&mut command);
 
-            MetaCommandType::execute_meta_command(&command);
+            match MetaCommandType::execute_meta_command(&command, &mut per_db) {
+                Ok(_) => (),
+                Err(err) => match err {
+                    MetaCommandErr::Unknown => {
+                        println!("unknown meta command found!");
+                        continue;
+                    }
+                },
+            }
 
-            StatementType::execute_statement(&command, per_db.as_mut());
+            match StatementType::execute_statement(&command, per_db.as_mut()) {
+                Ok(_) => {
+                    continue;
+                }
+                Err(err) => match err {
+                    StatementErr::Prepare(prepare_err) => match prepare_err {
+                        PrepareErr::Unknown => {
+                            println!("unknown statement found!");
+                            continue;
+                        }
+                        PrepareErr::SyntaxErr => {
+                            println!("invalid statement found!");
+                            continue;
+                        }
+                    },
+                    StatementErr::Execute(execute_err) => match execute_err {
+                        ExecuteErr::DatabaseDoesNotExist => {
+                            println!("database does not exist!");
+                            continue;
+                        }
+                        ExecuteErr::TableDoesNotExist => {
+                            println!("table does not exist!");
+                            continue;
+                        }
+                        ExecuteErr::NoOpenDatabase => {
+                            println!("no open database");
+                            continue;
+                        }
+                    },
+                },
+            }
         }
     }
 }
