@@ -23,6 +23,8 @@ pub mod repl {
 
             read_input(&mut command);
 
+            // println!("{:?}", per_db);
+
             match MetaCommandType::execute_meta_command(&command, &mut per_db, &mut per_db_name) {
                 Ok(_) => {
                     continue;
@@ -65,6 +67,7 @@ pub mod repl {
                     },
                 },
             }
+
             if let Some(name) = &per_db_name {
                 if let Some(db) = &per_db {
                     PersistantDatabase::save_db(name, db);

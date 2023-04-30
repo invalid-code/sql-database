@@ -20,9 +20,32 @@ pub enum ExecuteErr {
 
 #[derive(Debug)]
 pub enum StatementType {
-    Insert(i32, String, String, String, String),
-    Select(String, String),
-    Create(String, String, Option<String>),
+    Insert {
+        db: String,
+        table: String,
+        id: i32,
+        email: String,
+        username: String,
+    },
+    Select {
+        db: String,
+        table: String,
+    },
+    Create {
+        dtype: String,
+        db: String,
+        table: Option<String>,
+    },
+}
+
+impl Default for StatementType {
+    fn default() -> Self {
+        Self::Create {
+            dtype: "".to_string(),
+            db: "".to_string(),
+            table: None,
+        }
+    }
 }
 
 impl StatementType {
@@ -34,9 +57,11 @@ impl StatementType {
     ) -> Result<(), ExecuteErr> {
         match per_db {
             Some(per_db) => {
+                println!("{}", dstruct);
                 if dstruct == "db" {
                     let db = Database::create_database(dstructn.clone());
                     per_db.push_db(&db);
+                    // println!("{:?}", per_db);
                 }
                 if dstruct == "table" {
                     let table = Table::create_table(dstructn.clone());
@@ -93,42 +118,44 @@ impl StatementType {
         Ok(())
     }
     pub fn parse_statement(cmd: &str) -> Result<Self, PrepareErr> {
-        if &cmd[..6] == "insert" {
-            let args = cmd[7..].split(" ").collect::<Vec<&str>>();
-            if args.len() < 5 {
+        let args = cmd.split(" ").collect::<Vec<&str>>();
+        if args[0] == "insert" {
+            if args[1..].len() < 5 {
                 return Err(PrepareErr::SyntaxErr);
             }
-            return Ok(Self::Insert(
-                std::str::FromStr::from_str(args[0]).unwrap(),
-                args[1].to_owned(),
-                args[2].to_owned(),
-                args[3].to_owned(),
-                args[4].to_owned(),
-            ));
+            return Ok(Self::Insert {
+                id: std::str::FromStr::from_str(args[0]).unwrap(),
+                db: args[1].to_owned(),
+                table: args[2].to_owned(),
+                email: args[3].to_owned(),
+                username: args[4].to_owned(),
+            });
         }
 
-        if &cmd[..6] == "select" {
-            let args = cmd[7..].split(" ").collect::<Vec<&str>>();
-            if args.len() < 2 {
+        if args[0] == "select" {
+            if args[1..].len() < 2 {
                 return Err(PrepareErr::SyntaxErr);
             }
-            return Ok(Self::Select(
-                std::str::FromStr::from_str(args[0]).unwrap(),
-                args[1].to_owned(),
-            ));
+            return Ok(Self::Select {
+                db: std::str::FromStr::from_str(args[0]).unwrap(),
+                table: args[1].to_owned(),
+            });
         }
 
-        if &cmd[..6] == "create" {
-            let args = cmd[6..].split(" ").collect::<Vec<&str>>();
-            if args.len() == 3 {
-                return Ok(Self::Create(
-                    args[0].to_owned(),
-                    args[1].to_owned(),
-                    Some(args[2].to_owned()),
-                ));
+        if args[0] == "create" {
+            if args[1..].len() == 3 {
+                return Ok(Self::Create {
+                    dtype: args[0].to_owned(),
+                    db: args[1].to_owned(),
+                    table: Some(args[2].to_owned()),
+                });
             }
-            if args.len() == 2 {
-                return Ok(Self::Create(args[0].to_owned(), args[1].to_owned(), None));
+            if args[1..].len() == 2 {
+                return Ok(Self::Create {
+                    dtype: args[1].to_owned(),
+                    db: args[2].to_owned(),
+                    table: None,
+                });
             }
             return Err(PrepareErr::SyntaxErr);
         }
@@ -142,7 +169,13 @@ impl StatementType {
     ) -> Result<(), StatementErr> {
         match StatementType::parse_statement(command) {
             Ok(statement) => match statement {
-                StatementType::Insert(id, email, username, dname, tname) => {
+                StatementType::Insert {
+                    db: dname,
+                    table: tname,
+                    id,
+                    email,
+                    username,
+                } => {
                     match StatementType::execute_insert(
                         id,
                         email,
@@ -155,13 +188,18 @@ impl StatementType {
                         Err(err) => return Err(StatementErr::Execute(err)),
                     }
                 }
-                StatementType::Select(dname, tname) => {
-                    match StatementType::execute_select(dname.as_str(), tname.as_str(), per_db) {
-                        Ok(_) => (),
-                        Err(err) => return Err(StatementErr::Execute(err)),
-                    }
-                }
-                StatementType::Create(dstruct, dstructn, dname) => match dname {
+                StatementType::Select {
+                    db: dname,
+                    table: tname,
+                } => match StatementType::execute_select(dname.as_str(), tname.as_str(), per_db) {
+                    Ok(_) => (),
+                    Err(err) => return Err(StatementErr::Execute(err)),
+                },
+                StatementType::Create {
+                    dtype: dstruct,
+                    db: dstructn,
+                    table: dname,
+                } => match dname {
                     Some(dname) => {
                         match StatementType::execute_create(dstruct, dstructn, Some(&dname), per_db)
                         {
@@ -187,7 +225,9 @@ pub enum MetaCommandErr {
     NotMetaCommand,
 }
 
+#[derive(Debug, Default)]
 pub enum MetaCommandType {
+    #[default]
     Exit,
     Open(String),
 }
