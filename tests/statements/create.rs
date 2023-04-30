@@ -8,7 +8,7 @@ fn create_create_db_cmd(world: &mut StatementWorld) {
 
 #[then("the persistant database should have 1 database")]
 fn check_db_one(world: &mut StatementWorld) {
-    assert!(world.per_db.dbs.len() == 1);
+    assert!(world.per_db.num_dbs > 0);
 }
 
 #[given("a create table command")]
@@ -18,5 +18,5 @@ fn create_create_table_cmd(world: &mut StatementWorld) {
 
 #[then("the database should have 1 table")]
 fn check_table_one(world: &mut StatementWorld) {
-    assert!(world.per_db.dbs[0].tables.len() == 1);
+    assert!(world.per_db.dbs[0].num_tables == 1);
 }

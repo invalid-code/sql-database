@@ -115,6 +115,7 @@ impl PersistantDatabase {
                 match db.index.get(tname) {
                     Some(tindex) => {
                         db.tables[tindex.to_owned() as usize].rows.push(row);
+                        db.tables[tindex.to_owned() as usize].num_rows += 1;
                     }
                     None => return Err(ExecuteErr::TableDoesNotExist),
                 }

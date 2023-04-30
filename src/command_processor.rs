@@ -57,11 +57,9 @@ impl StatementType {
     ) -> Result<(), ExecuteErr> {
         match per_db {
             Some(per_db) => {
-                println!("{}", dstruct);
                 if dstruct == "db" {
                     let db = Database::create_database(dstructn.clone());
                     per_db.push_db(&db);
-                    // println!("{:?}", per_db);
                 }
                 if dstruct == "table" {
                     let table = Table::create_table(dstructn.clone());
@@ -124,11 +122,11 @@ impl StatementType {
                 return Err(PrepareErr::SyntaxErr);
             }
             return Ok(Self::Insert {
-                id: std::str::FromStr::from_str(args[0]).unwrap(),
                 db: args[1].to_owned(),
                 table: args[2].to_owned(),
-                email: args[3].to_owned(),
-                username: args[4].to_owned(),
+                id: std::str::FromStr::from_str(args[3]).unwrap(),
+                email: args[4].to_owned(),
+                username: args[5].to_owned(),
             });
         }
 
@@ -147,13 +145,13 @@ impl StatementType {
                 return Ok(Self::Create {
                     dtype: args[0].to_owned(),
                     db: args[1].to_owned(),
-                    table: Some(args[2].to_owned()),
+                    table: Some(args[2].trim().to_owned()),
                 });
             }
             if args[1..].len() == 2 {
                 return Ok(Self::Create {
                     dtype: args[1].to_owned(),
-                    db: args[2].to_owned(),
+                    db: args[2].trim().to_owned(),
                     table: None,
                 });
             }

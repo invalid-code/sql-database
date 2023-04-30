@@ -1,7 +1,5 @@
 use cucumber::{given, then, when, World};
-use sql_database::repl::{
-    MetaCommandType, PersistantDatabase, PersistantDatabaseErr, StatementType,
-};
+use sql_database::repl::{MetaCommandType, PersistantDatabase, StatementType};
 
 #[derive(Debug, World, Default)]
 struct PersistantWorld {
@@ -18,7 +16,7 @@ fn create_per_db_name(world: &mut PersistantWorld) {
 
 #[given("a create command")]
 fn create_create_meta_cmd(world: &mut PersistantWorld) {
-    world.create_command = "create first_db".to_string()
+    world.create_command = "create db first_db".to_string()
 }
 
 #[given("a persistant database")]
@@ -49,7 +47,7 @@ fn execute_save_db(world: &mut PersistantWorld) {
 #[then("the database should have been saved")]
 fn check_per_db(world: &mut PersistantWorld) {
     match PersistantDatabase::open_db(world.per_db_name.as_ref().unwrap()) {
-        Ok(_) => assert!(world.per_db.as_ref().unwrap().num_dbs == 1),
+        Ok(per_db) => assert!(per_db.num_dbs == 1),
         Err(_) => (),
     }
 }
