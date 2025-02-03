@@ -2,47 +2,146 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/binary"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
 )
 
+const (
+	MAX_KEYS = 5
+)
+
+func insert(a []int, index int, value int) []int {
+	if len(a) == index {
+		return append(a, value)
+	}
+	a = append(a[:index+1], a[index:]...)
+	a[index] = value
+	return a
+}
+
+type BTreeNodeType int
+
+const (
+	Internal BTreeNodeType = iota
+	Leaf
+)
+
+type BTreeNode struct {
+	IsRoot   bool
+	NodeType BTreeNodeType
+	Children []*BTreeNode
+	Keys     []int
+}
+
+func (bTreeNode *BTreeNode) insert(key int) {
+	switch bTreeNode.NodeType {
+	case Internal:
+		// for _, childBTreeNode := range bTreeNode.children {
+		// 	childBTreeNode.insert(key)
+		// }
+	case Leaf:
+		if len(bTreeNode.Keys) == 0 {
+			bTreeNode.Keys = append(bTreeNode.Keys, key)
+		} else {
+			for i, nodeKey := range bTreeNode.Keys {
+				if nodeKey < key {
+					if i == len(bTreeNode.Keys)-1 {
+						bTreeNode.Keys = append(bTreeNode.Keys, key)
+					} else {
+						bTreeNode.Keys = insert(bTreeNode.Keys, i+1, key)
+					}
+				}
+			}
+		}
+		if len(bTreeNode.Keys) > MAX_KEYS {
+			bTreeNode.split()
+		}
+	}
+}
+
+func (bTreeNode *BTreeNode) split() {
+	bTreeNode.NodeType = Internal
+	for i := 0; i < 2; i++ {
+		childBTreeNode := new(BTreeNode)
+		childBTreeNode.IsRoot = false
+		childBTreeNode.NodeType = Leaf
+		if i == 0 {
+			childBTreeNode.Keys = bTreeNode.Keys[0:2]
+		} else {
+			childBTreeNode.Keys = bTreeNode.Keys[3:]
+		}
+		bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
+	}
+	bTreeNode.Keys = bTreeNode.Keys[2:3] // wrong
+}
+
 const DB_FILENAME = "persistant.db"
 
 type Row struct {
-	Id    int
-	Name  string
-	Email string
+	Id    int    `gob:"id"`
+	Name  string `gob:"name"`
+	Email string `gob:"email"`
 }
 
-type Table struct {
-	Rows []Row
+func saveToFile(table BTreeNode) {
+	file, err := os.Create(DB_FILENAME)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	encoder := gob.NewEncoder(file)
+	err = encoder.Encode(table)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func saveToFile(table Table) {
-	buffer := bytes.NewBuffer()
-	encoder := binary.Encode()
+func readFile() BTreeNode {
+	_, err := os.Stat(DB_FILENAME)
+	var table BTreeNode
+	var file *os.File
+	if err == nil {
+		file, err = os.Open(DB_FILENAME)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+		decoder := gob.NewDecoder(file)
+		err = decoder.Decode(&table)
+		if err != nil {
+			panic(err)
+		}
+	} else if os.IsNotExist(err) {
+		table = BTreeNode{
+			IsRoot:   true,
+			NodeType: Leaf,
+			Keys:     []int{},
+			Children: []*BTreeNode{},
+		}
+	} else {
+		panic(err)
+	}
+	return table
 }
 
-func executeCommand(command CommandType) {
+func executeCommand(command CommandType, table BTreeNode) {
 	switch command {
 	case Exit:
+		saveToFile(table)
 		fmt.Println("Goodbye!")
 		os.Exit(0)
 	}
 }
 
-func executeStatement(statement StatementType, row *Row, table *Table) {
+func executeStatement(statement StatementType, row *Row, table *BTreeNode) {
 	switch statement {
 	case Insert:
-		(*table).rows = append((*table).rows, *row)
+		table.insert(row.Id)
+		fmt.Println(table)
 	case Select:
-		for _, row := range (*table).rows {
-			fmt.Println(row)
-		}
 	}
 }
 
@@ -87,7 +186,7 @@ func parseQuotedString(input string) string {
 }
 
 func parseRow(input string) (Row, error) {
-	row := Row{id: 0, name: "", email: ""}
+	row := Row{Id: 0, Name: "", Email: ""}
 	if input[0] != '(' {
 		return row, errors.New("invalid array given")
 	} else if input[len(input)-1] != ')' {
@@ -104,9 +203,9 @@ func parseRow(input string) (Row, error) {
 	if err != nil {
 		panic(err)
 	}
-	row.id = id
-	row.name = parseQuotedString(inputRow[1])
-	row.email = parseQuotedString(inputRow[2])
+	row.Id = id
+	row.Name = parseQuotedString(inputRow[1])
+	row.Email = parseQuotedString(inputRow[2])
 	return row, nil
 }
 
@@ -125,9 +224,7 @@ func parseStatement(input string) (StatementType, *Row, error) {
 }
 
 func main() {
-	table := Table{
-		rows: []Row{},
-	}
+	table := readFile()
 	for {
 		fmt.Printf("input> ")
 		scanner := bufio.NewScanner(os.Stdin)
@@ -145,7 +242,7 @@ func main() {
 				fmt.Errorf("%v", err)
 				continue
 			}
-			executeCommand(command)
+			executeCommand(command, table)
 		} else {
 			statement, row, err := parseStatement(input)
 			if err != nil {
