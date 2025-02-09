@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	table := readFile()
+	table := readFile(DB_FILENAME)
 	for {
 		fmt.Printf("input> ")
 		scanner := bufio.NewScanner(os.Stdin)
@@ -34,6 +34,8 @@ func main() {
 			}
 			executeStatement(statement, row, &table)
 			fmt.Println("Executed!")
+			fmt.Println("inside main")
+			table.printTree(0)
 		}
 	}
 }

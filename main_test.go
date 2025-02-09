@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
+const TEST_DB_FILENAME = "testing.db"
+
 func TestParseCommand(t *testing.T) {
 	_, res := parseCommand("exit")
 	if res != nil {
@@ -59,5 +61,14 @@ func TestInsert(t *testing.T) {
 	table.insert(1, 0)
 	if table.Keys[0] != 1 {
 		t.Errorf("didn't insert key")
+	}
+}
+
+func TestPersistance(t *testing.T) {
+	table := BTreeNode{IsRoot: true, NodeType: Leaf, Parent: nil, Keys: []int{}, Children: []*BTreeNode{}}
+	saveToFile(table, TEST_DB_FILENAME)
+	readTable := readFile(TEST_DB_FILENAME)
+	if !table.Equals(&readTable) {
+		t.Errorf("persistance failed")
 	}
 }

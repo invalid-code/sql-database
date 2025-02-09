@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
-	"fmt"
+	"bufio"
+	"io"
 	"os"
+
+	"github.com/Sereal/Sereal/Go/sereal"
 )
 
 func insert[T any](a []T, index int, value T) []T {
@@ -16,38 +17,40 @@ func insert[T any](a []T, index int, value T) []T {
 	return a
 }
 
-func saveToFile(table BTreeNode) {
-	file, err := os.Create(DB_FILENAME)
+func saveToFile(table BTreeNode, path string) {
+	file, err := os.Create(path)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	var bufferData []byte
-	buffer := bytes.NewBuffer(bufferData)
-	serializeTable(buffer, &table)
-	_, err = buffer.WriteTo(file)
+	encoder := sereal.NewEncoder()
+	bytes, err := encoder.Marshal(table)
+	if err != nil {
+		panic(err)
+	}
+	_, err = file.Write(bytes)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func readFile() BTreeNode {
-	_, err := os.Stat(DB_FILENAME)
+func readFile(path string) BTreeNode {
+	_, err := os.Stat(path)
 	var table BTreeNode
 	var file *os.File
 	if err == nil {
-		file, err = os.Open(DB_FILENAME)
+		file, err = os.Open(path)
 		if err != nil {
 			panic(err)
 		}
 		defer file.Close()
-		var bufferData []byte
-		buffer := bytes.NewBuffer(bufferData)
-		_, err := buffer.ReadFrom(file)
+		reader := bufio.NewReader(file)
+		bytes, err := io.ReadAll(reader)
 		if err != nil {
 			panic(err)
 		}
-		err = binary.Read(buffer, binary.LittleEndian, &table)
+		decoder := sereal.NewDecoder()
+		err = decoder.Unmarshal(bytes, &table)
 		if err != nil {
 			panic(err)
 		}
@@ -63,18 +66,6 @@ func readFile() BTreeNode {
 		panic(err)
 	}
 	return table
-}
-
-func convToSlice[T any, U any](in []T) ([]U, error) {
-	var res []U
-	for _, elem := range in {
-		if val, ok := interface{}(elem).(U); ok {
-			res = append(res, val)
-		} else {
-			return nil, fmt.Errorf("%v is not of type %v", val, *new(T))
-		}
-	}
-	return res, nil
 }
 
 func remove[T any](slice []T, s int) []T {
