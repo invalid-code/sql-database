@@ -18,17 +18,18 @@ type BTreeNode struct {
 	NodeType BTreeNodeType
 	Parent   *BTreeNode
 	Children []*BTreeNode
-	Keys     []int
+	Keys     []Row
 }
 
-func (bTreeNode *BTreeNode) insert(key int, pathIndex int) {
+func executeInsert(bTreeNode *BTreeNode, key Row, pathIndex int) {
 	switch bTreeNode.NodeType {
 	case Internal:
 		for i, nodeKey := range bTreeNode.Keys {
-			if nodeKey > key {
-				bTreeNode.Children[i].insert(key, i)
-			} else {
-				bTreeNode.Children[i+1].insert(key, i+1)
+			if nodeKey.Id >= key.Id {
+				executeInsert(bTreeNode.Children[i], key, i)
+				break
+			} else if len(bTreeNode.Keys)-1 == i {
+				executeInsert(bTreeNode.Children[i], key, i)
 			}
 		}
 	case Leaf:
@@ -36,7 +37,7 @@ func (bTreeNode *BTreeNode) insert(key int, pathIndex int) {
 			bTreeNode.Keys = append(bTreeNode.Keys, key)
 		} else {
 			for i, nodeKey := range bTreeNode.Keys {
-				if nodeKey > key {
+				if nodeKey.Id > key.Id {
 					keys := insert(bTreeNode.Keys, i, key)
 					bTreeNode.Keys = keys
 					break
@@ -47,81 +48,112 @@ func (bTreeNode *BTreeNode) insert(key int, pathIndex int) {
 			}
 		}
 		if len(bTreeNode.Keys) > MAX_KEYS {
-			bTreeNode.split(pathIndex)
-            fmt.Println("inside insert")
-            bTreeNode.Parent.printTree(0)
+			split(bTreeNode, pathIndex)
 		}
 	}
+
 }
 
-func (bTreeNode *BTreeNode) split(pathIndex int) {
-	leftKeys, rightKeys, middleKey := bTreeNode.Keys[0:3], bTreeNode.Keys[3:], bTreeNode.Keys[2]
-	var leftChildren, rightChildren []*BTreeNode
-	if bTreeNode.IsRoot {
-		bTreeNode.Keys = []int{middleKey}
-        switch bTreeNode.NodeType {
-        case Leaf:
-            bTreeNode.NodeType = Internal
-        case Internal:
-            bTreeNode.Children = []*BTreeNode{}
-        }
-	} else {
-		bTreeNode.Parent.Children = remove(bTreeNode.Parent.Children, pathIndex)
-		bTreeNode.Parent.Keys = insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
-	}
-    if bTreeNode.NodeType == Internal {
-		leftChildren, rightChildren = bTreeNode.Children[:3], bTreeNode.Children[3:]
-    }
-	for i := 0; i < 2; i++ {
-		childBTreeNode := new(BTreeNode)
-		childBTreeNode.IsRoot = false
-		if i == 0 {
-			childBTreeNode.Keys = leftKeys
+func split(bTreeNode *BTreeNode, pathIndex int) {
+	leftKeys, rightKeys, middleKey := bTreeNode.Keys[:3], bTreeNode.Keys[3:], bTreeNode.Keys[2]
+	switch bTreeNode.NodeType {
+	case Internal:
+		leftChildren, rightChildren := bTreeNode.Children[:3], bTreeNode.Children[3:]
+		if bTreeNode.IsRoot {
+			bTreeNode.Keys = []Row{middleKey}
+			for i := 0; i < 2; i++ {
+				childBTreeNode := new(BTreeNode)
+				childBTreeNode.IsRoot = false
+				childBTreeNode.NodeType = Internal
+				if i == 0 {
+					childBTreeNode.Keys = leftKeys
+					childBTreeNode.Children = leftChildren
+				} else {
+					childBTreeNode.Keys = rightKeys
+					childBTreeNode.Children = rightChildren
+				}
+				childBTreeNode.Parent = bTreeNode
+				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
+			}
 		} else {
-			childBTreeNode.Keys = rightKeys
-		}
-		switch bTreeNode.NodeType {
-		case Internal:
-			childBTreeNode.NodeType = Internal
-			if i == 0 {
-				childBTreeNode.Children = leftChildren
-			} else {
-				childBTreeNode.Children = rightChildren
-			}
-			if bTreeNode.IsRoot {
-				childBTreeNode.Parent = bTreeNode
-				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
-			} else {
+			bTreeNode.Parent.Keys = insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
+			bTreeNode.Parent.Children = remove(bTreeNode.Parent.Children, pathIndex)
+			for i := 0; i < 2; i++ {
+				childBTreeNode := new(BTreeNode)
+				childBTreeNode.IsRoot = false
+				childBTreeNode.NodeType = Internal
+				if i == 0 {
+					childBTreeNode.Keys = leftKeys
+					childBTreeNode.Children = leftChildren
+				} else {
+					childBTreeNode.Keys = rightKeys
+					childBTreeNode.Children = rightChildren
+				}
 				childBTreeNode.Parent = bTreeNode.Parent
 				bTreeNode.Parent.Children = insert(bTreeNode.Parent.Children, pathIndex+i, childBTreeNode)
 			}
-		case Leaf:
-			childBTreeNode.NodeType = Leaf
-			if bTreeNode.IsRoot {
+			if len(bTreeNode.Parent.Keys) > MAX_KEYS {
+				split(bTreeNode.Parent, pathIndex)
+			}
+		}
+	case Leaf:
+		if bTreeNode.IsRoot {
+			bTreeNode.Keys = []Row{middleKey}
+			bTreeNode.NodeType = Internal
+			for i := 0; i < 2; i++ {
+				childBTreeNode := new(BTreeNode)
+				childBTreeNode.IsRoot = false
+				childBTreeNode.NodeType = Leaf
+				if i == 0 {
+					childBTreeNode.Keys = leftKeys
+				} else {
+					childBTreeNode.Keys = rightKeys
+				}
 				childBTreeNode.Parent = bTreeNode
 				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
-			} else {
+			}
+		} else {
+			bTreeNode.Parent.Keys = insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
+			bTreeNode.Parent.Children = remove(bTreeNode.Parent.Children, pathIndex)
+			for i := 0; i < 2; i++ {
+				childBTreeNode := new(BTreeNode)
+				childBTreeNode.IsRoot = false
+				childBTreeNode.NodeType = Leaf
+				if i == 0 {
+					childBTreeNode.Keys = leftKeys
+				} else {
+					childBTreeNode.Keys = rightKeys
+				}
 				childBTreeNode.Parent = bTreeNode.Parent
 				bTreeNode.Parent.Children = insert(bTreeNode.Parent.Children, pathIndex+i, childBTreeNode)
 			}
+			if len(bTreeNode.Parent.Keys) > MAX_KEYS {
+				split(bTreeNode.Parent, pathIndex)
+			}
 		}
 	}
-	if !bTreeNode.IsRoot {
-		if len(bTreeNode.Parent.Keys) > MAX_KEYS {
-			bTreeNode.Parent.split(pathIndex)
-		}
-	}
-    fmt.Println("inside split")
-    bTreeNode.Parent.printTree(0)
 }
 
-func (bTreeNode *BTreeNode) printTree(level int) {
+func printTree(bTreeNode *BTreeNode, level int) {
 	for i := 0; i < level; i++ {
 		fmt.Printf("\t")
 	}
 	fmt.Printf("%v\n", bTreeNode)
 	for _, childBTreeNode := range bTreeNode.Children {
-		childBTreeNode.printTree(level + 1)
+		printTree(childBTreeNode, level + 1)
+	}
+}
+
+func executeSelect(bTreeNode *BTreeNode) {
+	switch bTreeNode.NodeType {
+	case Internal:
+		for _, childBTreeNode := range bTreeNode.Children {
+			executeSelect(childBTreeNode)
+		}
+	case Leaf:
+		for _, childBTreeNodeKey := range bTreeNode.Keys {
+			fmt.Println(childBTreeNodeKey)
+		}
 	}
 }
 

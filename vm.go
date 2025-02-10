@@ -14,12 +14,11 @@ func executeCommand(command CommandType, table BTreeNode) {
 	}
 }
 
-func executeStatement(statement StatementType, row *Row, table *BTreeNode) {
+func executeStatement(statement StatementType, row Row, table *BTreeNode) {
 	switch statement {
 	case Insert:
-		table.insert(row.Id, 0)
-		fmt.Println("inside executeStatement")
-		table.printTree(0)
+		executeInsert(table, row, 0)
 	case Select:
+		executeSelect(table)
 	}
 }

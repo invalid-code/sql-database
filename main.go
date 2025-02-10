@@ -34,8 +34,7 @@ func main() {
 			}
 			executeStatement(statement, row, &table)
 			fmt.Println("Executed!")
-			fmt.Println("inside main")
-			table.printTree(0)
+			printTree(&table, 0)
 		}
 	}
 }

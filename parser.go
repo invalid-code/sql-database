@@ -69,16 +69,16 @@ func parseRow(input string) (Row, error) {
 	return row, nil
 }
 
-func parseStatement(input string) (StatementType, *Row, error) {
+func parseStatement(input string) (StatementType, Row, error) {
 	statement, _ := parseWord(input)
 	if statement == "insert" {
 		row, err := parseRow(input[7:])
 		if err != nil {
 			panic(err)
 		}
-		return Insert, &row, nil
+		return Insert, row, nil
 	} else if statement == "select" {
-		return Select, nil, nil
+		return Select, Row{}, nil
 	}
-	return 0, nil, errors.New("unknown statement given")
+	return 0, Row{}, errors.New("unknown statement given")
 }
