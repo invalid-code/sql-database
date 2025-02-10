@@ -59,7 +59,8 @@ func readFile(path string) BTreeNode {
 			IsRoot:   true,
 			NodeType: Leaf,
 			Parent:   nil,
-			Keys:     []Row{},
+			Keys:     []int{},
+			Data:     []Row{},
 			Children: []*BTreeNode{},
 		}
 	} else {

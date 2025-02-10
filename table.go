@@ -18,32 +18,35 @@ type BTreeNode struct {
 	NodeType BTreeNodeType
 	Parent   *BTreeNode
 	Children []*BTreeNode
-	Keys     []Row
+	Keys     []int
+	Data     []Row
 }
 
-func executeInsert(bTreeNode *BTreeNode, key Row, pathIndex int) {
+func executeInsert(bTreeNode *BTreeNode, key int, row Row, pathIndex int) {
 	switch bTreeNode.NodeType {
 	case Internal:
 		for i, nodeKey := range bTreeNode.Keys {
-			if nodeKey.Id >= key.Id {
-				executeInsert(bTreeNode.Children[i], key, i)
+			if nodeKey >= key {
+				executeInsert(bTreeNode.Children[i], key, row, i)
 				break
 			} else if len(bTreeNode.Keys)-1 == i {
-				executeInsert(bTreeNode.Children[i], key, i)
+				executeInsert(bTreeNode.Children[i], key, row, i)
 			}
 		}
 	case Leaf:
 		if len(bTreeNode.Keys) == 0 {
 			bTreeNode.Keys = append(bTreeNode.Keys, key)
+			bTreeNode.Data = append(bTreeNode.Data, row)
 		} else {
 			for i, nodeKey := range bTreeNode.Keys {
-				if nodeKey.Id > key.Id {
-					keys := insert(bTreeNode.Keys, i, key)
-					bTreeNode.Keys = keys
+				if nodeKey > key {
+					bTreeNode.Keys = insert(bTreeNode.Keys, i, key)
+					bTreeNode.Data = insert(bTreeNode.Data, i, row)
 					break
 				}
 				if i == len(bTreeNode.Keys)-1 {
 					bTreeNode.Keys = append(bTreeNode.Keys, key)
+					bTreeNode.Data = append(bTreeNode.Data, row)
 				}
 			}
 		}
@@ -55,12 +58,14 @@ func executeInsert(bTreeNode *BTreeNode, key Row, pathIndex int) {
 }
 
 func split(bTreeNode *BTreeNode, pathIndex int) {
-	leftKeys, rightKeys, middleKey := bTreeNode.Keys[:3], bTreeNode.Keys[3:], bTreeNode.Keys[2]
+	leftKeys, rightKeys := bTreeNode.Keys[:3], bTreeNode.Keys[3:]
+	middleKey := bTreeNode.Keys[2]
+	leftData, rightData := bTreeNode.Data[:3], bTreeNode.Data[3:]
 	switch bTreeNode.NodeType {
 	case Internal:
 		leftChildren, rightChildren := bTreeNode.Children[:3], bTreeNode.Children[3:]
 		if bTreeNode.IsRoot {
-			bTreeNode.Keys = []Row{middleKey}
+			bTreeNode.Keys = []int{middleKey}
 			for i := 0; i < 2; i++ {
 				childBTreeNode := new(BTreeNode)
 				childBTreeNode.IsRoot = false
@@ -98,21 +103,25 @@ func split(bTreeNode *BTreeNode, pathIndex int) {
 		}
 	case Leaf:
 		if bTreeNode.IsRoot {
-			bTreeNode.Keys = []Row{middleKey}
+			bTreeNode.Keys = []int{middleKey}
 			bTreeNode.NodeType = Internal
+			bTreeNode.Data = []Row{}
 			for i := 0; i < 2; i++ {
 				childBTreeNode := new(BTreeNode)
 				childBTreeNode.IsRoot = false
 				childBTreeNode.NodeType = Leaf
 				if i == 0 {
 					childBTreeNode.Keys = leftKeys
+					childBTreeNode.Data = leftData
 				} else {
 					childBTreeNode.Keys = rightKeys
+					childBTreeNode.Data = rightData
 				}
 				childBTreeNode.Parent = bTreeNode
 				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
 			}
 		} else {
+			fmt.Println("hi")
 			bTreeNode.Parent.Keys = insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
 			bTreeNode.Parent.Children = remove(bTreeNode.Parent.Children, pathIndex)
 			for i := 0; i < 2; i++ {
@@ -121,8 +130,10 @@ func split(bTreeNode *BTreeNode, pathIndex int) {
 				childBTreeNode.NodeType = Leaf
 				if i == 0 {
 					childBTreeNode.Keys = leftKeys
+					childBTreeNode.Data = leftData
 				} else {
 					childBTreeNode.Keys = rightKeys
+					childBTreeNode.Data = rightData
 				}
 				childBTreeNode.Parent = bTreeNode.Parent
 				bTreeNode.Parent.Children = insert(bTreeNode.Parent.Children, pathIndex+i, childBTreeNode)
@@ -140,7 +151,7 @@ func printTree(bTreeNode *BTreeNode, level int) {
 	}
 	fmt.Printf("%v\n", bTreeNode)
 	for _, childBTreeNode := range bTreeNode.Children {
-		printTree(childBTreeNode, level + 1)
+		printTree(childBTreeNode, level+1)
 	}
 }
 
@@ -151,8 +162,9 @@ func executeSelect(bTreeNode *BTreeNode) {
 			executeSelect(childBTreeNode)
 		}
 	case Leaf:
-		for _, childBTreeNodeKey := range bTreeNode.Keys {
-			fmt.Println(childBTreeNodeKey)
+		for i, childBTreeNodeKey := range bTreeNode.Keys {
+			row := bTreeNode.Data[i]
+			fmt.Printf("id: %v, name: %v, email: %v\n", childBTreeNodeKey, row.Name, row.Email)
 		}
 	}
 }
@@ -180,7 +192,6 @@ func (bTreeNode *BTreeNode) Equals(other *BTreeNode) bool {
 const DB_FILENAME = "persistant.db"
 
 type Row struct {
-	Id    int    `gob:"id"`
-	Name  string `gob:"name"`
-	Email string `gob:"email"`
+	Name  string
+	Email string
 }

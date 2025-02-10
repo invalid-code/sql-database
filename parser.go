@@ -45,12 +45,12 @@ func parseQuotedString(input string) string {
 	return input
 }
 
-func parseRow(input string) (Row, error) {
-	row := Row{Id: 0, Name: "", Email: ""}
+func parseRow(input string) (int, Row, error) {
+	row := Row{Name: "a", Email: "a"}
 	if input[0] != '(' {
-		return row, errors.New("invalid array given")
+		return 0, row, errors.New("invalid array given")
 	} else if input[len(input)-1] != ')' {
-		return row, errors.New("invalid array given")
+		return 0, row, errors.New("invalid array given")
 	}
 	offset := 1
 	inputRow := []string{}
@@ -63,22 +63,21 @@ func parseRow(input string) (Row, error) {
 	if err != nil {
 		panic(err)
 	}
-	row.Id = id
 	row.Name = parseQuotedString(inputRow[1])
 	row.Email = parseQuotedString(inputRow[2])
-	return row, nil
+	return id, row, nil
 }
 
-func parseStatement(input string) (StatementType, Row, error) {
+func parseStatement(input string) (StatementType, int, Row, error) {
 	statement, _ := parseWord(input)
 	if statement == "insert" {
-		row, err := parseRow(input[7:])
+		id, row, err := parseRow(input[7:])
 		if err != nil {
 			panic(err)
 		}
-		return Insert, row, nil
+		return Insert, id, row, nil
 	} else if statement == "select" {
-		return Select, Row{}, nil
+		return Select, 0, Row{}, nil
 	}
-	return 0, Row{}, errors.New("unknown statement given")
+	return 0, 0, Row{}, errors.New("unknown statement given")
 }

@@ -27,12 +27,12 @@ func main() {
 			}
 			executeCommand(command, table)
 		} else {
-			statement, row, err := parseStatement(input)
+			statement, id, row, err := parseStatement(input)
 			if err != nil {
 				fmt.Errorf("%v", err)
 				continue
 			}
-			executeStatement(statement, row, &table)
+			executeStatement(statement, id, row, &table)
 			fmt.Println("Executed!")
 			printTree(&table, 0)
 		}
