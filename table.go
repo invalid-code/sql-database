@@ -22,150 +22,68 @@ type BTreeNode struct {
 	Data     []Row
 }
 
-func executeInsert(bTreeNode *BTreeNode, key int, row Row, pathIndex int) {
+func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) *BTreeNode {
 	switch bTreeNode.NodeType {
 	case Internal:
-		for i, nodeKey := range bTreeNode.Keys {
-			if nodeKey >= key {
-				executeInsert(bTreeNode.Children[i], key, row, i)
-				break
-			} else if len(bTreeNode.Keys)-1 == i {
-				executeInsert(bTreeNode.Children[i], key, row, i)
+		for i, childBTreeNodeKey := range bTreeNode.Keys {
+			if key <= childBTreeNodeKey {
+				bTreeNode.Children = append(bTreeNode.Children, bTreeNode.Children[i].insertKey(key, data, i))
+				return bTreeNode
+			} else if i == len(bTreeNode.Keys) - 1 {
+				panic("todo")
 			}
 		}
 	case Leaf:
 		if len(bTreeNode.Keys) == 0 {
 			bTreeNode.Keys = append(bTreeNode.Keys, key)
-			bTreeNode.Data = append(bTreeNode.Data, row)
+			bTreeNode.Data = append(bTreeNode.Data, data)
 		} else {
-			for i, nodeKey := range bTreeNode.Keys {
-				if nodeKey > key {
+			for i, childBTreeNodeKey := range bTreeNode.Keys {
+				if key < childBTreeNodeKey {
 					bTreeNode.Keys = insert(bTreeNode.Keys, i, key)
-					bTreeNode.Data = insert(bTreeNode.Data, i, row)
-					break
-				}
-				if i == len(bTreeNode.Keys)-1 {
+					bTreeNode.Data = insert(bTreeNode.Data, i, data)
+				} else if i == len(bTreeNode.Keys) - 1 {
 					bTreeNode.Keys = append(bTreeNode.Keys, key)
-					bTreeNode.Data = append(bTreeNode.Data, row)
+					bTreeNode.Data = append(bTreeNode.Data, data)
 				}
 			}
-		}
-		if len(bTreeNode.Keys) > MAX_KEYS {
-			split(bTreeNode, pathIndex)
+			if len(bTreeNode.Keys) > MAX_KEYS {
+				bTreeNode = bTreeNode.split(pathIndex)
+			}
+			return bTreeNode
 		}
 	}
-
+	return nil
 }
 
-func split(bTreeNode *BTreeNode, pathIndex int) {
-	leftKeys, rightKeys := bTreeNode.Keys[:3], bTreeNode.Keys[3:]
-	middleKey := bTreeNode.Keys[2]
-	leftData, rightData := bTreeNode.Data[:3], bTreeNode.Data[3:]
+func (bTreeNode *BTreeNode) split(pathIndex int) *BTreeNode {
 	switch bTreeNode.NodeType {
 	case Internal:
-		leftChildren, rightChildren := bTreeNode.Children[:3], bTreeNode.Children[3:]
-		if bTreeNode.IsRoot {
-			bTreeNode.Keys = []int{middleKey}
-			for i := 0; i < 2; i++ {
-				childBTreeNode := new(BTreeNode)
-				childBTreeNode.IsRoot = false
-				childBTreeNode.NodeType = Internal
-				if i == 0 {
-					childBTreeNode.Keys = leftKeys
-					childBTreeNode.Children = leftChildren
-				} else {
-					childBTreeNode.Keys = rightKeys
-					childBTreeNode.Children = rightChildren
-				}
-				childBTreeNode.Parent = bTreeNode
-				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
-			}
-		} else {
-			bTreeNode.Parent.Keys = insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
-			bTreeNode.Parent.Children = remove(bTreeNode.Parent.Children, pathIndex)
-			for i := 0; i < 2; i++ {
-				childBTreeNode := new(BTreeNode)
-				childBTreeNode.IsRoot = false
-				childBTreeNode.NodeType = Internal
-				if i == 0 {
-					childBTreeNode.Keys = leftKeys
-					childBTreeNode.Children = leftChildren
-				} else {
-					childBTreeNode.Keys = rightKeys
-					childBTreeNode.Children = rightChildren
-				}
-				childBTreeNode.Parent = bTreeNode.Parent
-				bTreeNode.Parent.Children = insert(bTreeNode.Parent.Children, pathIndex+i, childBTreeNode)
-			}
-			if len(bTreeNode.Parent.Keys) > MAX_KEYS {
-				split(bTreeNode.Parent, pathIndex)
-			}
+	case Leaf:
+	}
+	return nil
+}
+
+func (bTreeNode *BTreeNode) printRows() {
+	switch bTreeNode.NodeType {
+	case Internal:
+		for _, childBTreeNode := range bTreeNode.Children {
+			childBTreeNode.printRows()
 		}
 	case Leaf:
-		if bTreeNode.IsRoot {
-			bTreeNode.Keys = []int{middleKey}
-			bTreeNode.NodeType = Internal
-			bTreeNode.Data = []Row{}
-			for i := 0; i < 2; i++ {
-				childBTreeNode := new(BTreeNode)
-				childBTreeNode.IsRoot = false
-				childBTreeNode.NodeType = Leaf
-				if i == 0 {
-					childBTreeNode.Keys = leftKeys
-					childBTreeNode.Data = leftData
-				} else {
-					childBTreeNode.Keys = rightKeys
-					childBTreeNode.Data = rightData
-				}
-				childBTreeNode.Parent = bTreeNode
-				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
-			}
-		} else {
-			fmt.Println("hi")
-			bTreeNode.Parent.Keys = insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
-			bTreeNode.Parent.Children = remove(bTreeNode.Parent.Children, pathIndex)
-			for i := 0; i < 2; i++ {
-				childBTreeNode := new(BTreeNode)
-				childBTreeNode.IsRoot = false
-				childBTreeNode.NodeType = Leaf
-				if i == 0 {
-					childBTreeNode.Keys = leftKeys
-					childBTreeNode.Data = leftData
-				} else {
-					childBTreeNode.Keys = rightKeys
-					childBTreeNode.Data = rightData
-				}
-				childBTreeNode.Parent = bTreeNode.Parent
-				bTreeNode.Parent.Children = insert(bTreeNode.Parent.Children, pathIndex+i, childBTreeNode)
-			}
-			if len(bTreeNode.Parent.Keys) > MAX_KEYS {
-				split(bTreeNode.Parent, pathIndex)
-			}
+		for i, key := range bTreeNode.Keys {
+			fmt.Printf("id: %v, name: %v, email: %v\n", key, bTreeNode.Data[i].Name, bTreeNode.Data[i].Email)
 		}
 	}
 }
 
-func printTree(bTreeNode *BTreeNode, level int) {
+func (bTreeNode *BTreeNode) printTree(level int) {
 	for i := 0; i < level; i++ {
 		fmt.Printf("\t")
 	}
 	fmt.Printf("%v\n", bTreeNode)
 	for _, childBTreeNode := range bTreeNode.Children {
-		printTree(childBTreeNode, level+1)
-	}
-}
-
-func executeSelect(bTreeNode *BTreeNode) {
-	switch bTreeNode.NodeType {
-	case Internal:
-		for _, childBTreeNode := range bTreeNode.Children {
-			executeSelect(childBTreeNode)
-		}
-	case Leaf:
-		for i, childBTreeNodeKey := range bTreeNode.Keys {
-			row := bTreeNode.Data[i]
-			fmt.Printf("id: %v, name: %v, email: %v\n", childBTreeNodeKey, row.Name, row.Email)
-		}
+		childBTreeNode.printTree(level + 1)
 	}
 }
 
@@ -190,6 +108,20 @@ func (bTreeNode *BTreeNode) Equals(other *BTreeNode) bool {
 }
 
 const DB_FILENAME = "persistant.db"
+
+type Table struct {
+	rows   BTreeNode
+	length int
+}
+
+func (table *Table) executeInsert(id int, data Row) {
+	// table.length += 1
+	table.rows.insertKey(id, data, 0)
+}
+
+func (table *Table) executeSelect() {
+	table.rows.printRows()
+}
 
 type Row struct {
 	Name  string

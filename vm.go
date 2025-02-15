@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func executeCommand(command CommandType, table BTreeNode) {
+func executeCommand(command CommandType, table Table) {
 	switch command {
 	case Exit:
 		saveToFile(table, DB_FILENAME)
@@ -14,11 +14,11 @@ func executeCommand(command CommandType, table BTreeNode) {
 	}
 }
 
-func executeStatement(statement StatementType, id int, row Row, table *BTreeNode) {
+func executeStatement(statement StatementType, id int, row Row, table *Table) {
 	switch statement {
 	case Insert:
-		executeInsert(table, id, row, 0)
+		table.executeInsert(id, row)
 	case Select:
-		executeSelect(table)
+		table.executeSelect()
 	}
 }
