@@ -21,12 +21,14 @@ func (stack *Stack[T]) push(item T) {
 	stack.length += 1
 }
 
-func insert[T any](a []T, index int, value T) []T {
-	if len(a) == index {
-		return append(a, value)
+func insert[T any](a []T, index int, values ...T) []T {
+	for i, value := range values {
+		if len(a) == index {
+			return append(a, value)
+		}
+		a = append(a[:index+i+1], a[index+i:]...)
+		a[index] = value
 	}
-	a = append(a[:index+1], a[index:]...)
-	a[index] = value
 	return a
 }
 
