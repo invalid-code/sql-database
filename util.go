@@ -23,7 +23,3 @@ func (queue *Queue[T]) push(stack []T, item T) []T {
 func (queue *Queue[T]) isEmpty() bool {
 	return len(queue.data) == 0
 }
-
-func remove[T any](slice []T, s int) []T {
-	return append(slice[:s], slice[s+1:]...)
-}

@@ -112,6 +112,9 @@ func readFile(path string) Table {
 				table.rows.Data[i].Email += string(rune(emailCharacter))
 			}
 		}
+		if len(table.rows.Keys) > MAX_KEYS {
+			table.rows.split(0)
+		}
 	} else if os.IsNotExist(err) {
 		table = Table{
 			rows: BTreeNode{

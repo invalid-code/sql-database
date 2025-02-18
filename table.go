@@ -28,29 +28,38 @@ type BTreeNode struct {
 func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) {
 	switch bTreeNode.NodeType {
 	case Internal:
+		var foundIndex int
 		for i, childKey := range bTreeNode.Keys {
 			if key <= childKey {
-				(&(*((*bTreeNode).Children[i]))).insertKey(key, data, i)
+				foundIndex = i
+				bTreeNode.Children[i].insertKey(key, data, i)
+				break
 			} else if i == len(bTreeNode.Keys)-1 {
-				(&(*((*bTreeNode).Children[i]))).insertKey(key, data, i)
+				foundIndex = i + 1
+				bTreeNode.Children[i+1].insertKey(key, data, i+1)
 			}
+		}
+		bTreeNode = bTreeNode.Children[foundIndex].Parent
+		if !bTreeNode.IsRoot {
+			bTreeNode.Parent.Children[pathIndex] = bTreeNode
 		}
 	case Leaf:
 		if len(bTreeNode.Keys) == 0 {
-			(*bTreeNode).Keys = append(bTreeNode.Keys, key)
-			(*bTreeNode).Data = append(bTreeNode.Data, data)
+			bTreeNode.Keys = append(bTreeNode.Keys, key)
+			bTreeNode.Data = append(bTreeNode.Data, data)
 		} else {
 			for i, nodeKey := range bTreeNode.Keys {
 				if key <= nodeKey {
-					(*bTreeNode).Keys = slices.Insert(bTreeNode.Keys, i, key)
-					(*bTreeNode).Data = slices.Insert(bTreeNode.Data, i, data)
+					bTreeNode.Keys = slices.Insert(bTreeNode.Keys, i, key)
+					bTreeNode.Data = slices.Insert(bTreeNode.Data, i, data)
+					break
 				} else if i == len(bTreeNode.Keys)-1 {
-					(*bTreeNode).Keys = append(bTreeNode.Keys, key)
-					(*bTreeNode).Data = append(bTreeNode.Data, data)
+					bTreeNode.Keys = append(bTreeNode.Keys, key)
+					bTreeNode.Data = append(bTreeNode.Data, data)
 				}
 			}
 			if len(bTreeNode.Keys) > MAX_KEYS {
-				(&(*bTreeNode)).split(pathIndex)
+				bTreeNode.split(pathIndex)
 			}
 		}
 	}
@@ -180,7 +189,7 @@ type Table struct {
 
 func (table *Table) executeInsert(id int, data Row) {
 	table.length += 1
-	table.rows.insertKey(id, data, 0)
+	table.rows = *table.rows.insertKey(id, data, 0)
 }
 
 func (table *Table) executeSelect() {
