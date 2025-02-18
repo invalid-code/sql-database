@@ -25,21 +25,19 @@ type BTreeNode struct {
 	Data     []Row
 }
 
-func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) {
+func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) *BTreeNode {
 	switch bTreeNode.NodeType {
 	case Internal:
-		var foundIndex int
+		var childBTreeNode *BTreeNode
 		for i, childKey := range bTreeNode.Keys {
 			if key <= childKey {
-				foundIndex = i
-				bTreeNode.Children[i].insertKey(key, data, i)
+				childBTreeNode = bTreeNode.Children[i].insertKey(key, data, i)
 				break
 			} else if i == len(bTreeNode.Keys)-1 {
-				foundIndex = i + 1
-				bTreeNode.Children[i+1].insertKey(key, data, i+1)
+				childBTreeNode = bTreeNode.Children[i+1].insertKey(key, data, i+1)
 			}
 		}
-		bTreeNode = bTreeNode.Children[foundIndex].Parent
+		bTreeNode = childBTreeNode.Parent
 		if !bTreeNode.IsRoot {
 			bTreeNode.Parent.Children[pathIndex] = bTreeNode
 		}
@@ -63,6 +61,7 @@ func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) {
 			}
 		}
 	}
+	return bTreeNode
 }
 
 func (bTreeNode *BTreeNode) split(pathIndex int) {
@@ -132,6 +131,7 @@ func (bTreeNode *BTreeNode) split(pathIndex int) {
 			childBTreeNode.Data = rightData
 			bTreeNode.Keys = leftKeys
 			bTreeNode.Data = leftData
+			bTreeNode.Parent.Keys = slices.Insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
 			bTreeNode.Parent.Children = slices.Insert(bTreeNode.Parent.Children, pathIndex+1, childBTreeNode)
 		}
 	}
