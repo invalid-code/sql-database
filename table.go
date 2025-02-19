@@ -48,12 +48,20 @@ func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) *BTreeNo
 		} else {
 			for i, nodeKey := range bTreeNode.Keys {
 				if key <= nodeKey {
-					bTreeNode.Keys = slices.Insert(bTreeNode.Keys, i, key)
-					bTreeNode.Data = slices.Insert(bTreeNode.Data, i, data)
+					destKeys := make([]int, len(bTreeNode.Keys))
+					copy(destKeys, bTreeNode.Keys)
+					destData := make([]Row, len(bTreeNode.Data))
+					copy(destData, bTreeNode.Data)
+					bTreeNode.Keys = slices.Insert(destKeys, i, key)
+					bTreeNode.Data = slices.Insert(destData, i, data)
 					break
 				} else if i == len(bTreeNode.Keys)-1 {
-					bTreeNode.Keys = append(bTreeNode.Keys, key)
-					bTreeNode.Data = append(bTreeNode.Data, data)
+					destKeys := make([]int, len(bTreeNode.Keys))
+					copy(destKeys, bTreeNode.Keys)
+					destData := make([]Row, len(bTreeNode.Data))
+					copy(destData, bTreeNode.Data)
+					bTreeNode.Keys = append(destKeys, key)
+					bTreeNode.Data = append(destData, data)
 				}
 			}
 			if len(bTreeNode.Keys) > MAX_KEYS {
