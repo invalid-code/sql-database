@@ -2,10 +2,15 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 )
 
 func saveToFile(table Table, path string) {
+	if table.length == 0 {
+		fmt.Println("No data to save")
+		return
+	}
 	file, err := os.Create(path)
 	if err != nil {
 		panic(err)
@@ -23,18 +28,18 @@ func saveToFile(table Table, path string) {
 			panic(err)
 		}
 		curNode := *queueData
-		switch curNode.NodeType {
+		switch curNode.nodeType {
 		case Internal:
-			for _, childBTreeNode := range curNode.Children {
+			for _, childBTreeNode := range curNode.children {
 				nodesQueue.data = nodesQueue.push(nodesQueue.data, childBTreeNode)
 			}
 		case Leaf:
-			for i, key := range curNode.Keys {
+			for i, key := range curNode.keys {
 				err = binary.Write(file, binary.LittleEndian, uint8(key))
 				if err != nil {
 					panic(err)
 				}
-				curName := curNode.Data[i].Name
+				curName := curNode.data[i].name
 				err = binary.Write(file, binary.LittleEndian, uint8(len(curName)))
 				if err != nil {
 					panic(err)
@@ -45,7 +50,7 @@ func saveToFile(table Table, path string) {
 						panic(err)
 					}
 				}
-				curEmail := curNode.Data[i].Email
+				curEmail := curNode.data[i].email
 				err = binary.Write(file, binary.LittleEndian, uint8(len(curEmail)))
 				if err != nil {
 					panic(err)
@@ -77,16 +82,16 @@ func readFile(path string) Table {
 			panic(err)
 		}
 		table.length = int(tableLength)
-		table.rows.NodeType = Leaf
-		table.rows.IsRoot = true
-		table.rows.Keys = make([]int, table.length)
-		table.rows.Data = make([]Row, table.length)
+		table.rows.nodeType = Leaf
+		table.rows.isRoot = true
+		table.rows.keys = make([]int, table.length)
+		table.rows.data = make([]Row, table.length)
 		for i := 0; i < table.length; i++ {
 			err = binary.Read(file, binary.LittleEndian, &key)
 			if err != nil {
 				panic(err)
 			}
-			table.rows.Keys[i] = int(key)
+			table.rows.keys[i] = int(key)
 			err = binary.Read(file, binary.LittleEndian, &nameLen)
 			if err != nil {
 				panic(err)
@@ -97,7 +102,7 @@ func readFile(path string) Table {
 				if err != nil {
 					panic(err)
 				}
-				table.rows.Data[i].Name += string(rune(nameCharacter))
+				table.rows.data[i].name += string(rune(nameCharacter))
 			}
 			err = binary.Read(file, binary.LittleEndian, &emailLen)
 			if err != nil {
@@ -109,21 +114,21 @@ func readFile(path string) Table {
 				if err != nil {
 					panic(err)
 				}
-				table.rows.Data[i].Email += string(rune(emailCharacter))
+				table.rows.data[i].email += string(rune(emailCharacter))
 			}
 		}
-		if len(table.rows.Keys) > MAX_KEYS {
+		if len(table.rows.keys) > MAX_KEYS {
 			table.rows.split([]int{0})
 		}
 	} else if os.IsNotExist(err) {
 		table = Table{
 			rows: BTreeNode{
-				IsRoot:   true,
-				NodeType: Leaf,
-				Parent:   nil,
-				Keys:     []int{},
-				Data:     []Row{},
-				Children: []*BTreeNode{},
+				isRoot:   true,
+				nodeType: Leaf,
+				parent:   nil,
+				keys:     []int{},
+				data:     []Row{},
+				children: []*BTreeNode{},
 			},
 			length: 0,
 		}

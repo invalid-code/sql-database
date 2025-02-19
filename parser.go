@@ -46,7 +46,7 @@ func parseQuotedString(input string) string {
 }
 
 func parseRow(input string) (int, Row, error) {
-	row := Row{Name: "a", Email: "a"}
+	row := Row{name: "a", email: "a"}
 	if input[0] != '(' {
 		return 0, row, errors.New("invalid array given")
 	} else if input[len(input)-1] != ')' {
@@ -63,8 +63,8 @@ func parseRow(input string) (int, Row, error) {
 	if err != nil {
 		panic(err)
 	}
-	row.Name = parseQuotedString(inputRow[1])
-	row.Email = parseQuotedString(inputRow[2])
+	row.name = parseQuotedString(inputRow[1])
+	row.email = parseQuotedString(inputRow[2])
 	return id, row, nil
 }
 

@@ -17,54 +17,54 @@ const (
 )
 
 type BTreeNode struct {
-	IsRoot   bool
-	NodeType BTreeNodeType
-	Parent   *BTreeNode
-	Children []*BTreeNode
-	Keys     []int
-	Data     []Row
+	isRoot   bool
+	nodeType BTreeNodeType
+	parent   *BTreeNode
+	children []*BTreeNode
+	keys     []int
+	data     []Row
 }
 
 func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex []int) *BTreeNode {
-	switch bTreeNode.NodeType {
+	switch bTreeNode.nodeType {
 	case Internal:
 		var childBTreeNode *BTreeNode
-		for i, childKey := range bTreeNode.Keys {
+		for i, childKey := range bTreeNode.keys {
 			if key <= childKey {
-				childBTreeNode = bTreeNode.Children[i].insertKey(key, data, append(pathIndex, i))
+				childBTreeNode = bTreeNode.children[i].insertKey(key, data, append(pathIndex, i))
 				break
-			} else if i == len(bTreeNode.Keys)-1 {
-				childBTreeNode = bTreeNode.Children[i+1].insertKey(key, data, append(pathIndex, i+1))
+			} else if i == len(bTreeNode.keys)-1 {
+				childBTreeNode = bTreeNode.children[i+1].insertKey(key, data, append(pathIndex, i+1))
 			}
 		}
-		bTreeNode = childBTreeNode.Parent
-		if !bTreeNode.IsRoot {
-			bTreeNode.Parent.Children[pathIndex[len(pathIndex)-1]] = bTreeNode
+		bTreeNode = childBTreeNode.parent
+		if !bTreeNode.isRoot {
+			bTreeNode.parent.children[pathIndex[len(pathIndex)-1]] = bTreeNode
 		}
 	case Leaf:
-		if len(bTreeNode.Keys) == 0 {
-			bTreeNode.Keys = append(bTreeNode.Keys, key)
-			bTreeNode.Data = append(bTreeNode.Data, data)
+		if len(bTreeNode.keys) == 0 {
+			bTreeNode.keys = append(bTreeNode.keys, key)
+			bTreeNode.data = append(bTreeNode.data, data)
 		} else {
-			for i, nodeKey := range bTreeNode.Keys {
+			for i, nodeKey := range bTreeNode.keys {
 				if key <= nodeKey {
-					destKeys := make([]int, len(bTreeNode.Keys))
-					copy(destKeys, bTreeNode.Keys)
-					destData := make([]Row, len(bTreeNode.Data))
-					copy(destData, bTreeNode.Data)
-					bTreeNode.Keys = slices.Insert(destKeys, i, key)
-					bTreeNode.Data = slices.Insert(destData, i, data)
+					destKeys := make([]int, len(bTreeNode.keys))
+					copy(destKeys, bTreeNode.keys)
+					destData := make([]Row, len(bTreeNode.data))
+					copy(destData, bTreeNode.data)
+					bTreeNode.keys = slices.Insert(destKeys, i, key)
+					bTreeNode.data = slices.Insert(destData, i, data)
 					break
-				} else if i == len(bTreeNode.Keys)-1 {
-					destKeys := make([]int, len(bTreeNode.Keys))
-					copy(destKeys, bTreeNode.Keys)
-					destData := make([]Row, len(bTreeNode.Data))
-					copy(destData, bTreeNode.Data)
-					bTreeNode.Keys = append(destKeys, key)
-					bTreeNode.Data = append(destData, data)
+				} else if i == len(bTreeNode.keys)-1 {
+					destKeys := make([]int, len(bTreeNode.keys))
+					copy(destKeys, bTreeNode.keys)
+					destData := make([]Row, len(bTreeNode.data))
+					copy(destData, bTreeNode.data)
+					bTreeNode.keys = append(destKeys, key)
+					bTreeNode.data = append(destData, data)
 				}
 			}
-			if len(bTreeNode.Keys) > MAX_KEYS {
+			if len(bTreeNode.keys) > MAX_KEYS {
 				bTreeNode.split(pathIndex)
 			}
 		}
@@ -74,85 +74,85 @@ func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex []int) *BTree
 
 func (bTreeNode *BTreeNode) split(pathIndex []int) {
 	curPathIndex := pathIndex[len(pathIndex)-1]
-	leftKeys, rightKeys := bTreeNode.Keys[:3], bTreeNode.Keys[3:]
-	middleKey := bTreeNode.Keys[2]
+	leftKeys, rightKeys := bTreeNode.keys[:3], bTreeNode.keys[3:]
+	middleKey := bTreeNode.keys[2]
 	var leftChildren, rightChildren []*BTreeNode
 	var leftData, rightData []Row
-	switch bTreeNode.NodeType {
+	switch bTreeNode.nodeType {
 	case Internal:
-		leftChildren, rightChildren = bTreeNode.Children[:3], bTreeNode.Children[3:]
+		leftChildren, rightChildren = bTreeNode.children[:3], bTreeNode.children[3:]
 	case Leaf:
-		leftData, rightData = bTreeNode.Data[:3], bTreeNode.Data[3:]
+		leftData, rightData = bTreeNode.data[:3], bTreeNode.data[3:]
 	}
-	if bTreeNode.IsRoot {
-		bTreeNode.Keys = []int{middleKey}
-		switch bTreeNode.NodeType {
+	if bTreeNode.isRoot {
+		bTreeNode.keys = []int{middleKey}
+		switch bTreeNode.nodeType {
 		case Internal:
-			bTreeNode.Children = []*BTreeNode{}
+			bTreeNode.children = []*BTreeNode{}
 		case Leaf:
-			bTreeNode.Data = []Row{}
+			bTreeNode.data = []Row{}
 		}
 		for i := 0; i < 2; i++ {
 			childBTreeNode := new(BTreeNode)
-			childBTreeNode.IsRoot = false
-			switch bTreeNode.NodeType {
+			childBTreeNode.isRoot = false
+			switch bTreeNode.nodeType {
 			case Internal:
-				childBTreeNode.NodeType = Internal
+				childBTreeNode.nodeType = Internal
 				if i == 0 {
-					childBTreeNode.Children = leftChildren
+					childBTreeNode.children = leftChildren
 				} else {
-					childBTreeNode.Children = rightChildren
+					childBTreeNode.children = rightChildren
 				}
 			case Leaf:
-				childBTreeNode.NodeType = Leaf
+				childBTreeNode.nodeType = Leaf
 			}
-			childBTreeNode.Parent = bTreeNode
+			childBTreeNode.parent = bTreeNode
 			if i == 0 {
-				childBTreeNode.Keys = leftKeys
-				childBTreeNode.Data = leftData
+				childBTreeNode.keys = leftKeys
+				childBTreeNode.data = leftData
 			} else {
-				childBTreeNode.Keys = rightKeys
-				childBTreeNode.Data = rightData
+				childBTreeNode.keys = rightKeys
+				childBTreeNode.data = rightData
 			}
-			bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
+			bTreeNode.children = append(bTreeNode.children, childBTreeNode)
 		}
-		if bTreeNode.NodeType == Leaf {
-			bTreeNode.NodeType = Internal
+		if bTreeNode.nodeType == Leaf {
+			bTreeNode.nodeType = Internal
 		}
 	} else {
-		bTreeNode.Parent.Keys = slices.Insert(bTreeNode.Parent.Keys, pathIndex[len(pathIndex)-1], middleKey)
+		bTreeNode.parent.keys = slices.Insert(bTreeNode.parent.keys, pathIndex[len(pathIndex)-1], middleKey)
 		childBTreeNode := new(BTreeNode)
-		childBTreeNode.IsRoot = false
-		childBTreeNode.NodeType = Internal
-		childBTreeNode.Parent = bTreeNode.Parent
-		childBTreeNode.Keys = rightKeys
-		childBTreeNode.Data = rightData
-		bTreeNode.Keys = leftKeys
-		bTreeNode.Data = leftData
-		switch bTreeNode.NodeType {
+		childBTreeNode.isRoot = false
+		childBTreeNode.nodeType = Internal
+		childBTreeNode.parent = bTreeNode.parent
+		childBTreeNode.keys = rightKeys
+		childBTreeNode.data = rightData
+		bTreeNode.keys = leftKeys
+		bTreeNode.data = leftData
+		switch bTreeNode.nodeType {
 		case Internal:
-			childBTreeNode.NodeType = Internal
-			childBTreeNode.Children = rightChildren
-			bTreeNode.Children = leftChildren
+			childBTreeNode.nodeType = Internal
+			childBTreeNode.children = rightChildren
+			bTreeNode.children = leftChildren
 		case Leaf:
-			childBTreeNode.NodeType = Leaf
+			childBTreeNode.nodeType = Leaf
 		}
-		bTreeNode.Parent.Children = slices.Insert(bTreeNode.Parent.Children, curPathIndex+1, childBTreeNode)
-		if len(bTreeNode.Parent.Keys) > MAX_KEYS {
-			bTreeNode.Parent.split(pathIndex[:len(pathIndex)-1])
+		bTreeNode.parent.children = slices.Insert(bTreeNode.parent.children, curPathIndex+1, childBTreeNode)
+		if len(bTreeNode.parent.keys) > MAX_KEYS {
+			bTreeNode.parent.split(pathIndex[:len(pathIndex)-1])
 		}
 	}
 }
 
 func (bTreeNode *BTreeNode) printRows() {
-	switch bTreeNode.NodeType {
+	switch bTreeNode.nodeType {
 	case Internal:
-		for _, childBTreeNode := range bTreeNode.Children {
+		for _, childBTreeNode := range bTreeNode.children {
 			childBTreeNode.printRows()
 		}
 	case Leaf:
-		for i, key := range bTreeNode.Keys {
-			fmt.Printf("id: %v, name: %v, email: %v\n", key, bTreeNode.Data[i].Name, bTreeNode.Data[i].Email)
+		for i, key := range bTreeNode.keys {
+			fmt.Printf("id: %v, name: %v, email: %v\n", key, bTreeNode.data[i].name, bTreeNode.data[i].email)
 		}
 	}
 }
@@ -162,24 +162,24 @@ func (bTreeNode *BTreeNode) printTree(level int) {
 		fmt.Printf("\t")
 	}
 	fmt.Printf("%v\n", bTreeNode)
-	for _, childBTreeNode := range bTreeNode.Children {
+	for _, childBTreeNode := range bTreeNode.children {
 		childBTreeNode.printTree(level + 1)
 	}
 }
 
 func (bTreeNode *BTreeNode) Equals(other *BTreeNode) bool {
-	isRootEq := bTreeNode.IsRoot == other.IsRoot
-	nodeTypeEq := bTreeNode.NodeType == other.NodeType
+	isRootEq := bTreeNode.isRoot == other.isRoot
+	nodeTypeEq := bTreeNode.nodeType == other.nodeType
 	keysEq := true
-	for i, key := range bTreeNode.Keys {
-		if key != other.Keys[i] {
+	for i, key := range bTreeNode.keys {
+		if key != other.keys[i] {
 			keysEq = false
 			break
 		}
 	}
 	childrenEq := true
-	for i, childBTreeNode := range bTreeNode.Children {
-		if !childBTreeNode.Equals(other.Children[i]) {
+	for i, childBTreeNode := range bTreeNode.children {
+		if !childBTreeNode.Equals(other.children[i]) {
 			childrenEq = false
 			break
 		}
@@ -208,6 +208,6 @@ func (table *Table) executeSelect() {
 }
 
 type Row struct {
-	Name  string
-	Email string
+	name  string
+	email string
 }
