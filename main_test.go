@@ -21,20 +21,21 @@ func TestParseStatement(t *testing.T) {
 }
 
 func TestBTreeSplit(t *testing.T) {
-	// table := BTreeNode{IsRoot: true, NodeType: Leaf, Parent: nil, Keys: []int{1, 2, 3, 4, 5}, Data: []Row{{"a", "a"}, {"a", "a"}, {"a", "a"}, {"a", "a"}, {"a", "a"}}, Children: []*BTreeNode{}}
-	// table.split(0)
-	// if table.Keys[0] != 3 {
-	// 	t.Errorf("didnt propogate the middle key up to parent")
-	// }
-	// if table.Children[0].Keys[0] != 1 {
-	// 	t.Errorf("didn't save the left keys correctly")
-	// }
-	// if table.Children[1].Keys[0] != 4 {
-	// 	t.Errorf("didn't save the right keys correctly")
-	// }
+	table := Table{length: 5, rows: BTreeNode{IsRoot: true, NodeType: Leaf, Parent: nil, Children: []*BTreeNode{}, Keys: []int{1, 2, 3, 4, 5}, Data: []Row{{"a", "a"}, {"a", "a"}, {"a", "a"}, {"a", "a"}, {"a", "a"}}}}
+	table.rows.split([]int{0})
+	if table.rows.Keys[0] != 3 {
+		t.Errorf("didnt propogate the middle key up to parent")
+	}
+	if table.rows.Children[0].Keys[0] != 1 {
+		t.Errorf("didn't save the left keys correctly")
+	}
+	if table.rows.Children[1].Keys[0] != 4 {
+		t.Errorf("didn't save the right keys correctly")
+	}
 }
 
 func TestBTreeMultipleSplit(t *testing.T) {
+	table := Table{length: 5, rows: BTreeNode{}}
 	// table := BTreeNode{IsRoot: true, NodeType: Leaf, Parent: nil, Keys: []int{1, 2, 10, 11, 12}, Data: []Row{{"a", "a"}, {"a", "a"}, {"a", "a"}, {"a", "a"}, {"a", "a"}}, Children: []*BTreeNode{}}
 	// table.split(0)
 	// keysToInsert := []int{3, 4}

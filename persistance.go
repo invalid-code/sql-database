@@ -113,7 +113,7 @@ func readFile(path string) Table {
 			}
 		}
 		if len(table.rows.Keys) > MAX_KEYS {
-			table.rows.split(0)
+			table.rows.split([]int{0})
 		}
 	} else if os.IsNotExist(err) {
 		table = Table{

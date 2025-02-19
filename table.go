@@ -25,21 +25,21 @@ type BTreeNode struct {
 	Data     []Row
 }
 
-func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) *BTreeNode {
+func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex []int) *BTreeNode {
 	switch bTreeNode.NodeType {
 	case Internal:
 		var childBTreeNode *BTreeNode
 		for i, childKey := range bTreeNode.Keys {
 			if key <= childKey {
-				childBTreeNode = bTreeNode.Children[i].insertKey(key, data, i)
+				childBTreeNode = bTreeNode.Children[i].insertKey(key, data, append(pathIndex, i))
 				break
 			} else if i == len(bTreeNode.Keys)-1 {
-				childBTreeNode = bTreeNode.Children[i+1].insertKey(key, data, i+1)
+				childBTreeNode = bTreeNode.Children[i+1].insertKey(key, data, append(pathIndex, i+1))
 			}
 		}
 		bTreeNode = childBTreeNode.Parent
 		if !bTreeNode.IsRoot {
-			bTreeNode.Parent.Children[pathIndex] = bTreeNode
+			bTreeNode.Parent.Children[pathIndex[len(pathIndex)-1]] = bTreeNode
 		}
 	case Leaf:
 		if len(bTreeNode.Keys) == 0 {
@@ -72,75 +72,74 @@ func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex int) *BTreeNo
 	return bTreeNode
 }
 
-func (bTreeNode *BTreeNode) split(pathIndex int) {
+func (bTreeNode *BTreeNode) split(pathIndex []int) {
+	curPathIndex := pathIndex[len(pathIndex)-1]
 	leftKeys, rightKeys := bTreeNode.Keys[:3], bTreeNode.Keys[3:]
-	leftData, rightData := bTreeNode.Data[:3], bTreeNode.Data[3:]
 	middleKey := bTreeNode.Keys[2]
+	var leftChildren, rightChildren []*BTreeNode
+	var leftData, rightData []Row
 	switch bTreeNode.NodeType {
 	case Internal:
-		leftChildren, rightChildren := bTreeNode.Children[:3], bTreeNode.Children[3:]
-		if bTreeNode.IsRoot {
+		leftChildren, rightChildren = bTreeNode.Children[:3], bTreeNode.Children[3:]
+	case Leaf:
+		leftData, rightData = bTreeNode.Data[:3], bTreeNode.Data[3:]
+	}
+	if bTreeNode.IsRoot {
+		bTreeNode.Keys = []int{middleKey}
+		switch bTreeNode.NodeType {
+		case Internal:
 			bTreeNode.Children = []*BTreeNode{}
-			bTreeNode.Keys = []int{middleKey}
-			for i := 0; i < 2; i++ {
-				childBTreeNode := new(BTreeNode)
-				childBTreeNode.IsRoot = false
+		case Leaf:
+			bTreeNode.Data = []Row{}
+		}
+		for i := 0; i < 2; i++ {
+			childBTreeNode := new(BTreeNode)
+			childBTreeNode.IsRoot = false
+			switch bTreeNode.NodeType {
+			case Internal:
 				childBTreeNode.NodeType = Internal
-				childBTreeNode.Parent = bTreeNode
 				if i == 0 {
-					childBTreeNode.Keys = leftKeys
-					childBTreeNode.Data = leftData
 					childBTreeNode.Children = leftChildren
 				} else {
-					childBTreeNode.Keys = rightKeys
-					childBTreeNode.Data = rightData
 					childBTreeNode.Children = rightChildren
 				}
-				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
-			}
-		} else {
-			childBTreeNode := new(BTreeNode)
-			childBTreeNode.IsRoot = false
-			childBTreeNode.NodeType = Internal
-			childBTreeNode.Parent = bTreeNode.Parent
-			childBTreeNode.Keys = rightKeys
-			childBTreeNode.Data = rightData
-			childBTreeNode.Children = rightChildren
-			bTreeNode.Keys = leftKeys
-			bTreeNode.Data = leftData
-			bTreeNode.Children = leftChildren
-			bTreeNode.Parent.Children = slices.Insert(bTreeNode.Parent.Children, pathIndex+1, childBTreeNode)
-		}
-	case Leaf:
-		if bTreeNode.IsRoot {
-			bTreeNode.NodeType = Internal
-			bTreeNode.Keys = []int{middleKey}
-			bTreeNode.Data = []Row{}
-			for i := 0; i < 2; i++ {
-				childBTreeNode := new(BTreeNode)
-				childBTreeNode.IsRoot = false
+			case Leaf:
 				childBTreeNode.NodeType = Leaf
-				childBTreeNode.Parent = bTreeNode
-				if i == 0 {
-					childBTreeNode.Keys = leftKeys
-					childBTreeNode.Data = leftData
-				} else {
-					childBTreeNode.Keys = rightKeys
-					childBTreeNode.Data = rightData
-				}
-				bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
 			}
-		} else {
-			childBTreeNode := new(BTreeNode)
-			childBTreeNode.IsRoot = false
+			childBTreeNode.Parent = bTreeNode
+			if i == 0 {
+				childBTreeNode.Keys = leftKeys
+				childBTreeNode.Data = leftData
+			} else {
+				childBTreeNode.Keys = rightKeys
+				childBTreeNode.Data = rightData
+			}
+			bTreeNode.Children = append(bTreeNode.Children, childBTreeNode)
+		}
+		if bTreeNode.NodeType == Leaf {
+			bTreeNode.NodeType = Internal
+		}
+	} else {
+		bTreeNode.Parent.Keys = slices.Insert(bTreeNode.Parent.Keys, pathIndex[len(pathIndex)-1], middleKey)
+		childBTreeNode := new(BTreeNode)
+		childBTreeNode.IsRoot = false
+		childBTreeNode.NodeType = Internal
+		childBTreeNode.Parent = bTreeNode.Parent
+		childBTreeNode.Keys = rightKeys
+		childBTreeNode.Data = rightData
+		bTreeNode.Keys = leftKeys
+		bTreeNode.Data = leftData
+		switch bTreeNode.NodeType {
+		case Internal:
+			childBTreeNode.NodeType = Internal
+			childBTreeNode.Children = rightChildren
+			bTreeNode.Children = leftChildren
+		case Leaf:
 			childBTreeNode.NodeType = Leaf
-			childBTreeNode.Parent = bTreeNode.Parent
-			childBTreeNode.Keys = rightKeys
-			childBTreeNode.Data = rightData
-			bTreeNode.Keys = leftKeys
-			bTreeNode.Data = leftData
-			bTreeNode.Parent.Keys = slices.Insert(bTreeNode.Parent.Keys, pathIndex, middleKey)
-			bTreeNode.Parent.Children = slices.Insert(bTreeNode.Parent.Children, pathIndex+1, childBTreeNode)
+		}
+		bTreeNode.Parent.Children = slices.Insert(bTreeNode.Parent.Children, curPathIndex+1, childBTreeNode)
+		if len(bTreeNode.Parent.Keys) > MAX_KEYS {
+			bTreeNode.Parent.split(pathIndex[:len(pathIndex)-1])
 		}
 	}
 }
@@ -197,11 +196,15 @@ type Table struct {
 
 func (table *Table) executeInsert(id int, data Row) {
 	table.length += 1
-	table.rows = *table.rows.insertKey(id, data, 0)
+	table.rows = *table.rows.insertKey(id, data, []int{0})
 }
 
 func (table *Table) executeSelect() {
-	table.rows.printRows()
+	if table.length == 0 {
+		fmt.Println("You have no rows to print")
+	} else {
+		table.rows.printRows()
+	}
 }
 
 type Row struct {
