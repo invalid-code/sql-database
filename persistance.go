@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -105,7 +106,9 @@ func readFile(path string) Table {
 		curBTreeNode := &table.rows
 		for {
 			err = binary.Read(file, binary.LittleEndian, &bTreeIndex)
-			if err != nil {
+			if err == io.EOF {
+				break
+			} else if err != nil {
 				panic(err)
 			}
 			if isRootIndex {
@@ -118,6 +121,8 @@ func readFile(path string) Table {
 				if err != nil {
 					panic(err)
 				}
+				curBTreeNode.keys = make([]int, keysLen)
+				curBTreeNode.data = make([]Row, keysLen)
 				for i := 0; i < int(keysLen); i++ {
 					err = binary.Read(file, binary.LittleEndian, &key)
 					if err != nil {
@@ -150,19 +155,19 @@ func readFile(path string) Table {
 					}
 				}
 			} else {
-				if curBTreeNode.nodeType == Leaf {
-					(*curBTreeNode).nodeType = Internal
-				}
-				(*curBTreeNode).children[bTreeIndex] = &BTreeNode{isRoot: false, nodeType: Leaf, parent: curBTreeNode, children: []*BTreeNode{}, keys: []int{}, data: []Row{}}
-				curBTreeNode = curBTreeNode.children[bTreeIndex]
-				curBTreeNodeParent := curBTreeNode
-				for {
-					if curBTreeNodeParent.parent == nil {
-						table.rows = *curBTreeNodeParent
-						break
-					}
-					curBTreeNodeParent = curBTreeNodeParent.parent
-				}
+				// if curBTreeNode.nodeType == Leaf {
+				// 	(*curBTreeNode).nodeType = Internal
+				// }
+				// (*curBTreeNode).children[bTreeIndex] = &BTreeNode{isRoot: false, nodeType: Leaf, parent: curBTreeNode, children: []*BTreeNode{}, keys: []int{}, data: []Row{}}
+				// curBTreeNode = curBTreeNode.children[bTreeIndex]
+				// curBTreeNodeParent := curBTreeNode
+				// for {
+				// 	if curBTreeNodeParent.parent == nil {
+				// 		table.rows = *curBTreeNodeParent
+				// 		break
+				// 	}
+				// 	curBTreeNodeParent = curBTreeNodeParent.parent
+				// }
 			}
 		}
 	} else if os.IsNotExist(err) {

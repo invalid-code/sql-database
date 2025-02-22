@@ -9,11 +9,14 @@ import (
 func parseWord(input string) (string, int) {
 	parsedInput, offset := "", 0
 	for i, character := range input {
-		if character == ' ' || i == len(input)-1 {
+		if character == ' ' {
 			offset = i
 			break
 		}
 		parsedInput += string(character)
+		if i == len(input)-1 {
+			offset = i
+		}
 	}
 	return parsedInput, offset
 }
@@ -75,6 +78,9 @@ func parseRow(input string) (int, Row, error) {
 func parseStatement(input string) (StatementType, int, Row, error) {
 	statement, _ := parseWord(input)
 	if statement == "insert" {
+		if len(input) < 7 {
+			return Insert, 0, Row{}, errors.New("didn't provide array")
+		}
 		id, row, err := parseRow(input[7:])
 		if err != nil {
 			return Insert, 0, Row{}, err
