@@ -22,19 +22,21 @@ func main() {
 		if input[0] == '.' {
 			command, err := parseCommand(input[1:])
 			if err != nil {
-				fmt.Errorf("%v", err)
+				fmt.Println(err)
 				continue
 			}
 			executeCommand(command, table)
 		} else {
 			statement, id, row, err := parseStatement(input)
 			if err != nil {
-				fmt.Errorf("%v", err)
+				fmt.Println(err)
 				continue
 			}
-			executeStatement(statement, id, row, &table)
+			err = executeStatement(statement, id, row, &table)
+			if err != nil {
+				fmt.Println(err)
+			}
 			fmt.Println("Executed!")
-			table.rows.printTree(0)
 		}
 	}
 }

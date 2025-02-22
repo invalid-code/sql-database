@@ -22,18 +22,37 @@ func saveToFile(table Table, path string) {
 	}
 	nodesQueue := Queue[*BTreeNode]{data: []*BTreeNode{}}
 	nodesQueue.data = nodesQueue.push(nodesQueue.data, &(table.rows))
+	nodesPathQueue := Queue[int]{data: []int{}}
+	nodesPathQueue.data = nodesPathQueue.push(nodesPathQueue.data, 0)
 	for !nodesQueue.isEmpty() {
 		queueData, err := nodesQueue.pop()
+		if err != nil {
+			panic(err)
+		}
+		pathQueueData, err := nodesPathQueue.pop()
+		if err != nil {
+			panic(err)
+		}
+		err = binary.Write(file, binary.LittleEndian, uint8(*pathQueueData))
 		if err != nil {
 			panic(err)
 		}
 		curNode := *queueData
 		switch curNode.nodeType {
 		case Internal:
-			for _, childBTreeNode := range curNode.children {
+			for i, childBTreeNode := range curNode.children {
 				nodesQueue.data = nodesQueue.push(nodesQueue.data, childBTreeNode)
+				nodesPathQueue.data = nodesPathQueue.push(nodesPathQueue.data, i)
 			}
 		case Leaf:
+			err = binary.Write(file, binary.LittleEndian, uint8(255))
+			if err != nil {
+				panic(err)
+			}
+			err = binary.Write(file, binary.LittleEndian, uint8(len(curNode.keys)))
+			if err != nil {
+				panic(err)
+			}
 			for i, key := range curNode.keys {
 				err = binary.Write(file, binary.LittleEndian, uint8(key))
 				if err != nil {
@@ -76,49 +95,75 @@ func readFile(path string) Table {
 			panic(err)
 		}
 		defer file.Close()
-		var tableLength, key, nameLen, emailLen uint8
+		var tableLength, bTreeIndex, key, nameLen, emailLen, keysLen uint8
 		err = binary.Read(file, binary.LittleEndian, &tableLength)
 		if err != nil {
 			panic(err)
 		}
 		table.length = int(tableLength)
-		table.rows.nodeType = Leaf
-		table.rows.isRoot = true
-		table.rows.keys = make([]int, table.length)
-		table.rows.data = make([]Row, table.length)
-		for i := 0; i < table.length; i++ {
-			err = binary.Read(file, binary.LittleEndian, &key)
+		isRootIndex := true
+		curBTreeNode := &table.rows
+		for {
+			err = binary.Read(file, binary.LittleEndian, &bTreeIndex)
 			if err != nil {
 				panic(err)
 			}
-			table.rows.keys[i] = int(key)
-			err = binary.Read(file, binary.LittleEndian, &nameLen)
-			if err != nil {
-				panic(err)
+			if isRootIndex {
+				*curBTreeNode = BTreeNode{isRoot: true, nodeType: Leaf, parent: nil, children: []*BTreeNode{}, keys: []int{}, data: []Row{}}
+				isRootIndex = false
+				continue
 			}
-			for j := 0; j < int(nameLen); j++ {
-				var nameCharacter uint32
-				err = binary.Read(file, binary.LittleEndian, &nameCharacter)
+			if bTreeIndex == 255 {
+				err = binary.Read(file, binary.LittleEndian, &keysLen)
 				if err != nil {
 					panic(err)
 				}
-				table.rows.data[i].name += string(rune(nameCharacter))
-			}
-			err = binary.Read(file, binary.LittleEndian, &emailLen)
-			if err != nil {
-				panic(err)
-			}
-			for j := 0; j < int(emailLen); j++ {
-				var emailCharacter uint32
-				err = binary.Read(file, binary.LittleEndian, &emailCharacter)
-				if err != nil {
-					panic(err)
+				for i := 0; i < int(keysLen); i++ {
+					err = binary.Read(file, binary.LittleEndian, &key)
+					if err != nil {
+						panic(err)
+					}
+					curBTreeNode.keys[i] = int(key)
+					err = binary.Read(file, binary.LittleEndian, &nameLen)
+					if err != nil {
+						panic(err)
+					}
+					for j := 0; j < int(nameLen); j++ {
+						var nameCharacter uint32
+						err = binary.Read(file, binary.LittleEndian, &nameCharacter)
+						if err != nil {
+							panic(err)
+						}
+						curBTreeNode.data[i].name = string(rune(nameCharacter))
+					}
+					err = binary.Read(file, binary.LittleEndian, &emailLen)
+					if err != nil {
+						panic(err)
+					}
+					for j := 0; j < int(emailLen); j++ {
+						var emailCharacter uint32
+						err = binary.Read(file, binary.LittleEndian, &emailCharacter)
+						if err != nil {
+							panic(err)
+						}
+						curBTreeNode.data[i].name = string(rune(emailCharacter))
+					}
 				}
-				table.rows.data[i].email += string(rune(emailCharacter))
+			} else {
+				if curBTreeNode.nodeType == Leaf {
+					(*curBTreeNode).nodeType = Internal
+				}
+				(*curBTreeNode).children[bTreeIndex] = &BTreeNode{isRoot: false, nodeType: Leaf, parent: curBTreeNode, children: []*BTreeNode{}, keys: []int{}, data: []Row{}}
+				curBTreeNode = curBTreeNode.children[bTreeIndex]
+				curBTreeNodeParent := curBTreeNode
+				for {
+					if curBTreeNodeParent.parent == nil {
+						table.rows = *curBTreeNodeParent
+						break
+					}
+					curBTreeNodeParent = curBTreeNodeParent.parent
+				}
 			}
-		}
-		if len(table.rows.keys) > MAX_KEYS {
-			table.rows.split([]int{0})
 		}
 	} else if os.IsNotExist(err) {
 		table = Table{

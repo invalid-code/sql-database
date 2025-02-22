@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 )
@@ -194,9 +195,16 @@ type Table struct {
 	length int
 }
 
-func (table *Table) executeInsert(id int, data Row) {
+func (table *Table) executeInsert(id int, data Row) error {
+	if len(data.email) > 255 || len(data.email) < 1 {
+		return errors.New("email length must be between 1 and 255")
+	}
+	if len(data.name) > 33 || len(data.name) < 1 {
+		return errors.New("name length must be between 1 and 33")
+	}
 	table.length += 1
 	table.rows = *table.rows.insertKey(id, data, []int{0})
+	return nil
 }
 
 func (table *Table) executeSelect() {

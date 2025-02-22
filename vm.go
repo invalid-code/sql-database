@@ -14,11 +14,15 @@ func executeCommand(command CommandType, table Table) {
 	}
 }
 
-func executeStatement(statement StatementType, id int, row Row, table *Table) {
+func executeStatement(statement StatementType, id int, row Row, table *Table) error {
 	switch statement {
 	case Insert:
-		table.executeInsert(id, row)
+		err := table.executeInsert(id, row)
+		if err != nil {
+			return err
+		}
 	case Select:
 		table.executeSelect()
 	}
+	return nil
 }
