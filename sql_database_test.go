@@ -84,3 +84,127 @@ func TestPersistance(t *testing.T) {
 		t.Errorf("persistance failed")
 	}
 }
+
+func TestMultiLevelTreePersistance(t *testing.T) {
+	table := Table{
+		length: 22,
+		rows: BTreeNode{
+			isRoot:   true,
+			nodeType: Internal,
+			parent:   nil,
+			children: []*BTreeNode{
+				{
+					isRoot:   false,
+					nodeType: Internal,
+					keys:     []int{7},
+					children: []*BTreeNode{
+						{
+							isRoot:   false,
+							nodeType: Leaf,
+							keys:     []int{1, 2, 5, 6},
+							children: []*BTreeNode{},
+							data: []Row{
+								{
+									name:  "jess",
+									email: "jess",
+								},
+								{
+									name:  "jess2",
+									email: "jess2",
+								},
+								{
+									name:  "jess3",
+									email: "jess3",
+								},
+								{
+									name:  "jess4",
+									email: "jess4",
+								},
+							},
+						},
+						{
+							isRoot:   false,
+							nodeType: Leaf,
+							keys:     []int{7, 10, 11},
+							children: []*BTreeNode{},
+							data: []Row{
+								{
+									name:  "jess5",
+									email: "jess5",
+								},
+								{
+									name:  "jess6",
+									email: "jess6",
+								},
+								{
+									name:  "jess7",
+									email: "jess7",
+								},
+							},
+						},
+					},
+					data: []Row{},
+				},
+				{
+					isRoot:   false,
+					nodeType: Internal,
+					keys:     []int{20},
+					children: []*BTreeNode{
+						{
+							isRoot:   false,
+							nodeType: Leaf,
+							keys:     []int{12, 15, 16, 17},
+							children: []*BTreeNode{},
+							data: []Row{
+								{
+									name:  "jess8",
+									email: "jess8",
+								},
+								{
+									name:  "jess9",
+									email: "jess9",
+								},
+								{
+									name:  "jess10",
+									email: "jess10",
+								},
+								{
+									name:  "jess11",
+									email: "jess11",
+								},
+							},
+						},
+						{
+							isRoot:   false,
+							nodeType: Leaf,
+							keys:     []int{20, 21, 25},
+							children: []*BTreeNode{},
+							data: []Row{
+								{
+									name:  "jess12",
+									email: "jess12",
+								},
+								{
+									name:  "jess13",
+									email: "jess13",
+								},
+								{
+									name:  "jess14",
+									email: "jess14",
+								},
+							},
+						},
+					},
+					data: []Row{},
+				},
+			},
+			keys: []int{20},
+			data: []Row{},
+		},
+	}
+	saveToFile(table, TEST_DB_FILENAME)
+	readTable := readFile(TEST_DB_FILENAME)
+	if !table.rows.Equals(&readTable.rows) {
+		t.Errorf("persistance failed")
+	}
+}

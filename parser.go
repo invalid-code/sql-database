@@ -25,12 +25,16 @@ type CommandType int
 
 const (
 	Exit CommandType = iota
+	Help
 )
 
 func parseCommand(input string) (CommandType, error) {
 	cmd, _ := parseWord(input)
-	if cmd == "exit" {
+	switch cmd {
+	case "exit":
 		return Exit, nil
+	case "help":
+		return Help, nil
 	}
 	return 0, errors.New("unknown command given")
 }

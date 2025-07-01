@@ -93,7 +93,7 @@ func (bTreeNode *BTreeNode) split(pathIndex []int) {
 		case Leaf:
 			bTreeNode.data = []Row{}
 		}
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			childBTreeNode := new(BTreeNode)
 			childBTreeNode.isRoot = false
 			switch bTreeNode.nodeType {
@@ -159,7 +159,7 @@ func (bTreeNode *BTreeNode) printRows() {
 }
 
 func (bTreeNode *BTreeNode) printTree(level int) {
-	for i := 0; i < level; i++ {
+	for range level {
 		fmt.Printf("\t")
 	}
 	fmt.Printf("%v\n", bTreeNode)

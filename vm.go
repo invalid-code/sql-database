@@ -11,6 +11,12 @@ func executeCommand(command CommandType, table Table) {
 		saveToFile(table, DB_FILENAME)
 		fmt.Println("Goodbye!")
 		os.Exit(0)
+	case Help:
+		fmt.Println("Help")
+		fmt.Println("Commands")
+		fmt.Println("help")
+		fmt.Println("exit")
+		fmt.Println("Implemented SQL commands")
 	}
 }
 

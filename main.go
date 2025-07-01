@@ -37,6 +37,7 @@ func main() {
 				fmt.Println(err)
 			}
 			fmt.Println("Executed!")
+			table.rows.printTree(0)
 		}
 	}
 }
