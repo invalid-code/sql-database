@@ -87,123 +87,91 @@ func TestPersistance(t *testing.T) {
 
 func TestMultiLevelTreePersistance(t *testing.T) {
 	table := Table{
-		length: 22,
+		length: 0,
 		rows: BTreeNode{
 			isRoot:   true,
 			nodeType: Internal,
-			parent:   nil,
 			children: []*BTreeNode{
 				{
 					isRoot:   false,
 					nodeType: Internal,
-					keys:     []int{7},
 					children: []*BTreeNode{
 						{
 							isRoot:   false,
 							nodeType: Leaf,
-							keys:     []int{1, 2, 5, 6},
 							children: []*BTreeNode{},
-							data: []Row{
-								{
-									name:  "jess",
-									email: "jess",
-								},
-								{
-									name:  "jess2",
-									email: "jess2",
-								},
-								{
-									name:  "jess3",
-									email: "jess3",
-								},
-								{
-									name:  "jess4",
-									email: "jess4",
-								},
-							},
+							keys:     []int{1, 2, 5},
+							data:     []Row{{name: "jess", email: "jess"}, {name: "jess3", email: "jess3"}, {name: "jess2", email: "jess2"}},
 						},
 						{
 							isRoot:   false,
 							nodeType: Leaf,
-							keys:     []int{7, 10, 11},
 							children: []*BTreeNode{},
-							data: []Row{
-								{
-									name:  "jess5",
-									email: "jess5",
-								},
-								{
-									name:  "jess6",
-									email: "jess6",
-								},
-								{
-									name:  "jess7",
-									email: "jess7",
-								},
-							},
+							keys:     []int{6, 7, 10},
+							data:     []Row{{name: "jess5", email: "jess5"}, {name: "jess6", email: "jess6"}, {name: "jess4", email: "jess4"}},
 						},
+						{
+							isRoot:   false,
+							nodeType: Leaf,
+							children: []*BTreeNode{},
+							keys:     []int{11, 12, 15},
+							data:     []Row{{name: "jess7", email: "jess7"}, {name: "jess9", email: "jess9"}, {name: "jess8", email: "jess8"}}},
 					},
-					data: []Row{},
 				},
-				{
-					isRoot:   false,
-					nodeType: Internal,
-					keys:     []int{20},
-					children: []*BTreeNode{
-						{
-							isRoot:   false,
-							nodeType: Leaf,
-							keys:     []int{12, 15, 16, 17},
-							children: []*BTreeNode{},
-							data: []Row{
-								{
-									name:  "jess8",
-									email: "jess8",
-								},
-								{
-									name:  "jess9",
-									email: "jess9",
-								},
-								{
-									name:  "jess10",
-									email: "jess10",
-								},
-								{
-									name:  "jess11",
-									email: "jess11",
-								},
-							},
-						},
-						{
-							isRoot:   false,
-							nodeType: Leaf,
-							keys:     []int{20, 21, 25},
-							children: []*BTreeNode{},
-							data: []Row{
-								{
-									name:  "jess12",
-									email: "jess12",
-								},
-								{
-									name:  "jess13",
-									email: "jess13",
-								},
-								{
-									name:  "jess14",
-									email: "jess14",
-								},
-							},
-						},
+				keys: []int{5, 10, 15},
+				data: []Row{},
+			},
+			{
+				isRoot:   false,
+				nodeType: Internal,
+				children: []*BTreeNode{
+					{
+						isRoot:   false,
+						nodeType: Leaf,
+						children: []*BTreeNode{},
+						keys:     []int{16, 17, 20},
+						data:     []Row{{name: "jess10", email: "jess10"}, {name: "jess12", email: "jess12"}, {name: "jess11", email: "jess11"}},
 					},
+					{
+						isRoot:   false,
+						nodeType: Leaf,
+						children: []*BTreeNode{},
+						keys:     []int{21, 22, 25},
+						data:     []Row{{name: "jess13", email: "jess13"}, {name: "jess15", email: "jess15"}, {name: "jess14", email: "jess14"}},
+					},
+					{
+						isRoot:   false,
+						nodeType: Leaf,
+						children: []*BTreeNode{},
+						keys:     []int{26, 30},
+						data:     []Row{{name: "jess16", email: "jess16"}, {name: "jess17", email: "jess17"}}},
+					},
+					keys: []int{20, 25},
 					data: []Row{},
 				},
 			},
-			keys: []int{20},
+			keys: []int{15},
 			data: []Row{},
 		},
 	}
 	saveToFile(table, TEST_DB_FILENAME)
 	readTable := readFile(TEST_DB_FILENAME)
+	if !table.rows.Equals(&readTable.rows) {
+		t.Errorf("persistance failed")
+	}
+	table = Table{
+		length: 22,
+		rows: BTreeNode{
+			isRoot:   true,
+			nodeType: Leaf,
+			parent:   nil,
+			children: []*BTreeNode{},
+			keys:     []int{},
+			data:     []Row{},
+		},
+	}
+	saveToFile(table, TEST_DB_FILENAME)
+	readTable = readFile(TEST_DB_FILENAME)
 	if !table.rows.Equals(&readTable.rows) {
 		t.Errorf("persistance failed")
 	}

@@ -19,7 +19,9 @@ func main() {
 		}
 		input := scanner.Text()
 
-		if input[0] == '.' {
+		if len(input) < 1 {
+			continue
+		} else if input[0] == '.' {
 			command, err := parseCommand(input[1:])
 			if err != nil {
 				fmt.Println(err)

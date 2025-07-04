@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
 )
 
@@ -29,51 +28,37 @@ func saveToFile(table Table, path string) {
 			panic(err)
 		}
 		curNode := *queueData
-		switch curNode.nodeType {
-		case Internal:
-			for _, childBTreeNode := range curNode.children {
-				nodesQueue.data = nodesQueue.push(nodesQueue.data, childBTreeNode)
-			}
-			err = binary.Write(file, binary.LittleEndian, curNode.isRoot)
+		err = binary.Write(file, binary.LittleEndian, curNode.isRoot)
+		if err != nil {
+			panic(err)
+		}
+		err = binary.Write(file, binary.LittleEndian, uint8(len(curNode.keys)))
+		if err != nil {
+			panic(err)
+		}
+		for _, key := range curNode.keys {
+			err = binary.Write(file, binary.LittleEndian, uint8(key))
 			if err != nil {
 				panic(err)
 			}
+		}
+		switch curNode.nodeType {
+		case Internal:
 			err = binary.Write(file, binary.LittleEndian, uint8(0))
 			if err != nil {
 				panic(err)
-			}
-			err = binary.Write(file, binary.LittleEndian, uint8(len(curNode.keys)))
-			if err != nil {
-				panic(err)
-			}
-			for _, key := range curNode.keys {
-				err = binary.Write(file, binary.LittleEndian, uint8(key))
-				if err != nil {
-					panic(err)
-				}
 			}
 			err = binary.Write(file, binary.LittleEndian, uint8(len(curNode.children)))
 			if err != nil {
 				panic(err)
 			}
-		case Leaf:
-			err = binary.Write(file, binary.LittleEndian, curNode.isRoot)
-			if err != nil {
-				panic(err)
+			for _, childBTreeNode := range curNode.children {
+				nodesQueue.data = nodesQueue.push(nodesQueue.data, childBTreeNode)
 			}
+		case Leaf:
 			err = binary.Write(file, binary.LittleEndian, uint8(1))
 			if err != nil {
 				panic(err)
-			}
-			err = binary.Write(file, binary.LittleEndian, uint8(len(curNode.keys)))
-			if err != nil {
-				panic(err)
-			}
-			for _, key := range curNode.keys {
-				err = binary.Write(file, binary.LittleEndian, uint8(key))
-				if err != nil {
-					panic(err)
-				}
 			}
 			err = binary.Write(file, binary.LittleEndian, uint8(len(curNode.data)))
 			if err != nil {
@@ -111,12 +96,98 @@ func readFile(path string) Table {
 			panic(err)
 		}
 		defer file.Close()
-		var tableLength uint8
+		var tableLength, isRootByte, nodeType, keysLen, curKey, childrenLen, dataLen, nameLen, nameByte, emailLen, emailByte uint8
 		err = binary.Read(file, binary.LittleEndian, &tableLength)
 		if err != nil {
 			panic(err)
 		}
 		table.length = int(tableLength)
+		bTreeNodeQueue := Queue[*BTreeNode]{}
+		bTreeNodeQueue.data = bTreeNodeQueue.push(bTreeNodeQueue.data, &(table.rows))
+		for {
+			poppedBTreeNodeQueue, err := bTreeNodeQueue.pop()
+			if err != nil {
+				break
+			}
+			curBTreeNode := *poppedBTreeNodeQueue
+			err = binary.Read(file, binary.LittleEndian, &isRootByte)
+			if err != nil {
+				panic(err)
+			}
+			curBTreeNode.isRoot = isRootByte == 1
+			err = binary.Read(file, binary.LittleEndian, &keysLen)
+			if err != nil {
+				panic(err)
+			}
+			for range keysLen {
+				err = binary.Read(file, binary.LittleEndian, &curKey)
+				if err != nil {
+					panic(err)
+				}
+				curBTreeNode.keys = append(curBTreeNode.keys, int(curKey))
+			}
+			err = binary.Read(file, binary.LittleEndian, &nodeType)
+			if err != nil {
+				panic(err)
+			}
+			switch nodeType {
+			case 0:
+				curBTreeNode.nodeType = Internal
+			case 1:
+				curBTreeNode.nodeType = Leaf
+			}
+			switch curBTreeNode.nodeType {
+			case Internal:
+				err = binary.Read(file, binary.LittleEndian, &childrenLen)
+				if err != nil {
+					panic(err)
+				}
+				for range childrenLen {
+					newBTreeNode := BTreeNode{
+						isRoot:   false,
+						nodeType: Leaf,
+						parent:   curBTreeNode,
+						children: []*BTreeNode{},
+						keys:     []int{},
+						data:     []Row{},
+					}
+					bTreeNodeQueue.data = bTreeNodeQueue.push(bTreeNodeQueue.data, &newBTreeNode)
+					curBTreeNode.children = append(curBTreeNode.children, &newBTreeNode)
+				}
+			case Leaf:
+				err = binary.Read(file, binary.LittleEndian, &dataLen)
+				if err != nil {
+					panic(err)
+				}
+				for range dataLen {
+					err = binary.Read(file, binary.LittleEndian, &nameLen)
+					if err != nil {
+						panic(err)
+					}
+					name := ""
+					for range nameLen {
+						err = binary.Read(file, binary.LittleEndian, &nameByte)
+						if err != nil {
+							panic(err)
+						}
+						name += string(nameByte)
+					}
+					err = binary.Read(file, binary.LittleEndian, &emailLen)
+					if err != nil {
+						panic(err)
+					}
+					email := ""
+					for range nameLen {
+						err = binary.Read(file, binary.LittleEndian, &emailByte)
+						if err != nil {
+							panic(err)
+						}
+						email += string(emailByte)
+					}
+					curBTreeNode.data = append(curBTreeNode.data, Row{name, email})
+				}
+			}
+		}
 	} else if os.IsNotExist(err) {
 		table = Table{
 			rows: BTreeNode{
