@@ -41,12 +41,7 @@ func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex []int) *BTree
 		if childBTreeNode.parent != nil {
 			bTreeNode = childBTreeNode.parent
 			if bTreeNode.parent != nil {
-				childI := 0
-				if pathIndex[len(pathIndex)-1] > len(bTreeNode.parent.children) {
-					childI = len(bTreeNode.parent.children) - 1
-				} else {
-					childI = pathIndex[len(pathIndex)-1]
-				}
+				childI := min(pathIndex[len(pathIndex)-1], len(bTreeNode.parent.children)-1)
 				bTreeNode.parent.children[childI] = bTreeNode
 			}
 		}
