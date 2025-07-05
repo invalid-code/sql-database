@@ -38,9 +38,17 @@ func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex []int) *BTree
 				childBTreeNode = bTreeNode.children[i+1].insertKey(key, data, append(pathIndex, i+1))
 			}
 		}
-		bTreeNode = childBTreeNode.parent
-		if !bTreeNode.isRoot {
-			bTreeNode.parent.children[pathIndex[len(pathIndex)-1]] = bTreeNode
+		if childBTreeNode.parent != nil {
+			bTreeNode = childBTreeNode.parent
+			if bTreeNode.parent != nil {
+				childI := 0
+				if pathIndex[len(pathIndex)-1] > len(bTreeNode.parent.children) {
+					childI = len(bTreeNode.parent.children) - 1
+				} else {
+					childI = pathIndex[len(pathIndex)-1]
+				}
+				bTreeNode.parent.children[childI] = bTreeNode
+			}
 		}
 	case Leaf:
 		if len(bTreeNode.keys) == 0 {
@@ -66,14 +74,14 @@ func (bTreeNode *BTreeNode) insertKey(key int, data Row, pathIndex []int) *BTree
 				}
 			}
 			if len(bTreeNode.keys) > MAX_KEYS {
-				bTreeNode.split(pathIndex)
+				bTreeNode = bTreeNode.split(pathIndex)
 			}
 		}
 	}
 	return bTreeNode
 }
 
-func (bTreeNode *BTreeNode) split(pathIndex []int) {
+func (bTreeNode *BTreeNode) split(pathIndex []int) *BTreeNode {
 	curPathIndex := pathIndex[len(pathIndex)-1]
 	leftKeys, rightKeys := bTreeNode.keys[:3], bTreeNode.keys[3:]
 	middleKey := bTreeNode.keys[2]
@@ -100,8 +108,14 @@ func (bTreeNode *BTreeNode) split(pathIndex []int) {
 			case Internal:
 				childBTreeNode.nodeType = Internal
 				if i == 0 {
+					for leftChildI := range len(leftChildren) {
+						leftChildren[leftChildI].parent = childBTreeNode
+					}
 					childBTreeNode.children = leftChildren
 				} else {
+					for rightChildI := range len(rightChildren) {
+						rightChildren[rightChildI].parent = childBTreeNode
+					}
 					childBTreeNode.children = rightChildren
 				}
 			case Leaf:
@@ -120,6 +134,7 @@ func (bTreeNode *BTreeNode) split(pathIndex []int) {
 		if bTreeNode.nodeType == Leaf {
 			bTreeNode.nodeType = Internal
 		}
+		return bTreeNode
 	} else {
 		bTreeNode.parent.keys = slices.Insert(bTreeNode.parent.keys, pathIndex[len(pathIndex)-1], middleKey)
 		childBTreeNode := new(BTreeNode)
@@ -134,14 +149,19 @@ func (bTreeNode *BTreeNode) split(pathIndex []int) {
 		case Internal:
 			childBTreeNode.nodeType = Internal
 			childBTreeNode.children = rightChildren
+			for _, childBTreeNodeChild := range childBTreeNode.children {
+				childBTreeNodeChild.parent = childBTreeNode
+			}
 			bTreeNode.children = leftChildren
 		case Leaf:
 			childBTreeNode.nodeType = Leaf
 		}
 		bTreeNode.parent.children = slices.Insert(bTreeNode.parent.children, curPathIndex+1, childBTreeNode)
 		if len(bTreeNode.parent.keys) > MAX_KEYS {
-			bTreeNode.parent.split(pathIndex[:len(pathIndex)-1])
+			bTreeNode.parent = bTreeNode.parent.split(pathIndex[:len(pathIndex)-1])
+			bTreeNode.parent = childBTreeNode.parent
 		}
+		return bTreeNode.parent
 	}
 }
 
@@ -185,6 +205,11 @@ func (bTreeNode *BTreeNode) Equals(other *BTreeNode) bool {
 			break
 		}
 	}
+	// todo
+	// parentEq := true
+	// if bTreeNode.parent != nil && other.parent != nil {
+	// 	parentEq = bTreeNode.parent.Equals(other.parent)
+	// }
 	return (isRootEq && nodeTypeEq && keysEq && childrenEq)
 }
 
